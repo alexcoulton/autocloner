@@ -1,0 +1,7 @@
+#!/home/ac14037/bin/Rscript
+
+print(getwd())
+
+
+
+

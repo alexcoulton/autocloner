@@ -1,0 +1,6 @@
+#configuration file detailing
+#paths to genome assembly files,
+#including .fa file, blastdb and name of genome
+GENOME_1_NAME=IWGSC
+GENOME_1_FA_PATH=/mnt/data/genome_assemblies/iwgsc/iwgsc.4b.rev.fa
+GENOME_1_BLASTDB_PATH=/mnt/data/genome_assemblies/iwgsc/iwgsc.blast.db

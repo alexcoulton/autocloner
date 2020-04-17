@@ -1,0 +1,1 @@
+open an interactive R shell. insert your sequence into the file debug_seq.fa, then source main_debug.R
