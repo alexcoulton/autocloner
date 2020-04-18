@@ -4,6 +4,7 @@
 #perform BLAST search of sequence against genomes for primer picking
 
 
+
 gene.name = opt$sequence.name
 query.fa.path = opt$fasta.path
 
@@ -17,6 +18,9 @@ config.variables = multi.str.split(config.file, "=", 1)
 
 #parse number of genomes in configuration file
 number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables, "_", 2)))))
+
+
+
 
 #make arbitrary assignment so lapply doesn't print
 g = lapply(1:number.genomes, function(x){
@@ -37,11 +41,14 @@ g = lapply(1:number.genomes, function(x){
   
   print(p("Running ", query.fa.name, " vs ", genome.name, " BLAST"))
 
+if(blast.debug == T){
+  file.copy("debug_files/debug.blast", paste0("./jobs/", gene.name, "/blast.results/", "1", ".", query.fa.name, ".vs.", genome.name, ".blast"))
+} else {
   system(p("blastn -db ", blastdb.path, " -query ", query.fa.path,
            " -outfmt 6 -out ./jobs/", gene.name, "/blast.results/", x, ".", query.fa.name, ".vs.", genome.name, ".blast",
            " -num_threads 1 -culling_limit 10"))
+}
 
-  
 })
 
 
