@@ -55,7 +55,7 @@ if(number.genomes < 1) {
 			opt$max.product.size = 2000
 			opt$start.buffer = 2000
 			opt$end.buffer = 2000
-			opt$run.mode = "only.msa"
+			opt$run.mode = "only.snp.selection"
 			# opt$only.primer.selection = F
 			opt$own.alignment.path = "" # alignment path
 			# opt$only.msa = F
@@ -125,6 +125,15 @@ if(number.genomes < 1) {
 		}
 	}
 
+	run.only.snp.selection = function(){
+		ONLY.SNP.SELECTION <<- T
+		pipeline.stages = c("primer.selection.rscript.R")
+		for(i in pipeline.stages){
+			print.pipeline.stage(i)
+			source(paste0("./scripts/", i))
+		}
+	}
+
 	run.only.msa = function(){
 		#full run of pipeline
 			init.new.job()
@@ -153,6 +162,7 @@ if(number.genomes < 1) {
 		if(opt$run.mode == "own.align") run.pipeline.own.alignment()
 		if(opt$run.mode == "only.primer.selection") run.only.primer.selection()	
 		if(opt$run.mode == "only.msa") run.only.msa()	
+		if(opt$run.mode == "only.snp.selection") run.only.snp.selection()	
 
 	}
 }

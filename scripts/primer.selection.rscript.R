@@ -180,6 +180,7 @@ template.row = 2
 print("test1")
 trim.multiple.alignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"), main.gene.row, start.buffer, end.buffer)
 print("test2")
+mult.align_orig = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
 mult.align1 = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
 
 homologue.rows = 3:(nrow(mult.align1) - (number.genomes - 1))
@@ -360,196 +361,264 @@ get.coordinates.after.removing.hyphens = function(mult.align1, sequence.row.numb
   g
 }
 
+generate_align_w_snps = function(){
+	if(number.genomes > 1){
+	  homologous.snps = grab.homeologous.snps_orig(variety.rows, homologue.rows, mult.align_orig, F, T)  
+	} else {
+	  homologous.snps = grab.homeologous.snps_new(main.gene.row, template.row, homologue.rows, mult.align_orig)  
+	}
 
-if(number.genomes > 1){
-  homologous.snps = grab.homeologous.snps_orig(variety.rows, homologue.rows, mult.align1, F, T)  
-} else {
-  homologous.snps = grab.homeologous.snps_new(main.gene.row, template.row, homologue.rows, mult.align1)  
+	homologous.snps.msa = homologous.snps
+	homologous.snps.msa[which(homologous.snps.msa == 0)] = "-"
+	homologous.snps.msa[which(homologous.snps.msa == 1)] = "S"
+	mult.align_orig2 = conv.mult.align.dnastringset(mult.align_orig)
+	mult.align.w.snps = c(mult.align_orig2, DNAStringSet(DNAString(paste(homologous.snps.msa, collapse = ""))))
+	names(mult.align.w.snps)[length(mult.align.w.snps)] = "SNPs"
+	writeXStringSet(mult.align.w.snps, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.w.snps.fa"))
+
+	main.start.end = get.start.and.end.base(mult.align_orig, main.gene.row)
+
+	coords = get.coordinates.after.removing.hyphens(mult.align_orig, template.row, homologous.snps, main.start.end[1], main.start.end[2])
+
+	print("coords")
+	#if(length(coords) > 500) stop()
+	print(coords)
+
+	snps.smaller.than.start = length(coords$snp.coords[which(coords$snp.coords < coords$start.coord)])
+
+	snps.bigger.than.end = length(coords$snp.coords[which(coords$snp.coords > coords$end.coord)])
+
+	homologue.names = rownames(mult.align_orig)[homologue.rows]
+	variety.names = rownames(mult.align_orig)[variety.rows]
+
+	output.list1 = list(coords, homologous.snps, main.start.end)
+	names(output.list1) = c("coords", "homologous.snps", "main.start.end")
+	output.list1
+
 }
 
-main.start.end = get.start.and.end.base(mult.align1, main.gene.row)
+detect_snps_wrapper = function(){
+	if(number.genomes > 1){
+	  homologous.snps = grab.homeologous.snps_orig(variety.rows, homologue.rows, mult.align1, F, T)  
+	} else {
+	  homologous.snps = grab.homeologous.snps_new(main.gene.row, template.row, homologue.rows, mult.align1)  
+	}
 
-coords = get.coordinates.after.removing.hyphens(mult.align1, template.row, homologous.snps, main.start.end[1], main.start.end[2])
+	homologous.snps = grab.homeologous.snps_orig(variety.rows, homologue.rows, mult.align_orig, F, T)  
+	main.start.end = get.start.and.end.base(mult.align1, main.gene.row)
 
-print("coords")
-#if(length(coords) > 500) stop()
-print(coords)
+	coords = get.coordinates.after.removing.hyphens(mult.align1, template.row, homologous.snps, main.start.end[1], main.start.end[2])
 
-snps.smaller.than.start = length(coords$snp.coords[which(coords$snp.coords < coords$start.coord)])
+	print("coords")
+	#if(length(coords) > 500) stop()
+	print(coords)
 
-snps.bigger.than.end = length(coords$snp.coords[which(coords$snp.coords > coords$end.coord)])
+	snps.smaller.than.start = length(coords$snp.coords[which(coords$snp.coords < coords$start.coord)])
 
-homologue.names = rownames(mult.align1)[homologue.rows]
-variety.names = rownames(mult.align1)[variety.rows]
+	snps.bigger.than.end = length(coords$snp.coords[which(coords$snp.coords > coords$end.coord)])
 
-while.counter = 1
-while(snps.smaller.than.start < 2){ 
-  #check if less than 2 coordinates that are smaller than the start sequence
-  #if so, one of the sequences included in the multiple alignment could be too divergent.
-  #Try examining the multiple alignment, checking all homologue sequences (from IWGSC assembly)
-  #for hyphens before the start coordinate, and remove the sequence with the most hyphens
+	homologue.names = rownames(mult.align1)[homologue.rows]
+	variety.names = rownames(mult.align1)[variety.rows]
 
-  print("Less than 2 SNPs found before start of sequence, removing sequence with most hyphens before start")
-
-  get.sequence.to.remove = function(multiple.alignment1){    
-    #analyses a multiple alignment to check which sequence has the most hyphens before 
-    #the start position of the main sequence (row 1). Returns the name of the sequence
-    #with the most hyphens as a character string.
-    #args:
-    # multiple.alignment1 - a DNAMultipleAlignment object
-    mult.align1.mat = as.matrix(multiple.alignment1)
-    start.base.coord = min(grep("A|G|T|C", mult.align1.mat[1, ]))
-    matrix.before.start = mult.align1.mat[, 1:start.base.coord]    
-    #get number of insertions (hyphens) in each sequence - exclude input sequence and its closest BLAST hit
-    #from the evaulation 
-    num.hyphens = apply(matrix.before.start, 1, function(x) length(which(x == "-")))[3:nrow(matrix.before.start)]
-    names(num.hyphens[which(num.hyphens == max(num.hyphens))])
-  }
-
-  seq.to.rm = get.sequence.to.remove(mult.align1)
-
-  homo.update = which(homologue.names == seq.to.rm)
-  var.update = which(variety.names == seq.to.rm)
-
-  if(length(homo.update) > 0){
-    homologue.rows = homologue.rows[1:(length(homologue.rows) - length(homo.update))]
-    } 
-    variety.rows = variety.rows = variety.rows - length(homo.update)
-  if(length(var.update) > 0){
-     variety.rows = variety.rows[1:(length(variety.rows) - length(var.update))] 
-    }
-
-  print("seq.to.rm")
-  print(seq.to.rm)
-
-  number.of.removed.sequences = length(seq.to.rm)
-
-  mult.align.1.dnastringset = conv.mult.align.dnastringset(mult.align1)  
-
-  mult.align1.dnastringset2 = mult.align.1.dnastringset[-which(names(mult.align.1.dnastringset) %in% seq.to.rm)]
-
-  writeXStringSet(mult.align.1.dnastringset, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.old", while.counter, ".fa"))
-
-  print(p("Alignment: all.align.old", while.counter, ".fa"))
-  while.counter = while.counter + 1
-
-  #write multiple alignment without the sequence with the most hyphens
-  writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
-  writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
-
-  mult.align1 = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
-  
-  #if there is more than one sequence with the same number of hyphens, they will both be removed. if this is the case,
-  #we need to assign new homologue rows according to the number of sequences that were removed.
-  # homo.end = (nrow(mult.align1) - (number.genomes - number.of.removed.sequences))
-  # homologue.rows = 3:homo.end
-  #if two varietal sequences are removed at the same time, this can create false assignment of a varietal sequence as a homologue.
-  # if(homo.end < 3) homologue.rows = 3
-
-  # variety.rows = (max(homologue.rows) + 1):nrow(mult.align1)
-
-  if(number.genomes > 1){
-  homologous.snps = grab.homeologous.snps_orig(variety.rows, homologue.rows, mult.align1, F, T)  
-  } else {
-    homologous.snps = grab.homeologous.snps_new(main.gene.row, template.row, homologue.rows, mult.align1)  
-  }
-
-  main.start.end = get.start.and.end.base(mult.align1, main.gene.row)
-
-  coords = get.coordinates.after.removing.hyphens(mult.align1, template.row, homologous.snps, main.start.end[1], main.start.end[2])
-
-  print(coords)
-
-  snps.smaller.than.start = length(coords$snp.coords[which(coords$snp.coords < coords$start.coord)])  
+	output.list1 = list(coords, homologous.snps, main.start.end)
+	names(output.list1) = c("coords", "homologous.snps", "main.start.end")
+	output.list1
 }
 
-print("snps.bigger.than.end")
-print(snps.bigger.than.end)
+auto_remove_sequences_and_detect_snps = function(){
+	if(number.genomes > 1){
+	  homologous.snps = grab.homeologous.snps_orig(variety.rows, homologue.rows, mult.align1, F, T)  
+	} else {
+	  homologous.snps = grab.homeologous.snps_new(main.gene.row, template.row, homologue.rows, mult.align1)  
+	}
 
-while.counter = 1
-while(snps.bigger.than.end < 2){ 
-  #check if less than 2 coordinates that are smaller than the start sequence
-  #if so, one of the sequences included in the multiple alignment could be too divergent.
-  #Try examining the multiple alignment, checking all homologue sequences (from IWGSC assembly)
-  #for hyphens before the start coordinate, and remove the sequence with the most hyphens
+	main.start.end = get.start.and.end.base(mult.align1, main.gene.row)
 
-  print("Less than 2 SNPs found after end of sequence, removing sequence with most hyphens after end")
+	coords = get.coordinates.after.removing.hyphens(mult.align1, template.row, homologous.snps, main.start.end[1], main.start.end[2])
 
-  get.sequence.to.remove = function(multiple.alignment1){    
-    #analyses a multiple alignment to check which sequence has the most hyphens before 
-    #the start position of the main sequence (row 1). Returns the name of the sequence
-    #with the most hyphens as a character string.
-    #args:
-    # multiple.alignment1 - a DNAMultipleAlignment object
-    mult.align1.mat = as.matrix(multiple.alignment1)
-    end.base.coord = max(grep("A|G|T|C", mult.align1.mat[1, ]))
-    matrix.after.end = mult.align1.mat[, end.base.coord:ncol(mult.align1.mat)]    
-    #get number of insertions (hyphens) in each sequence - exclude input sequence and its closest BLAST hit
-    #from the evaulation 
-    num.hyphens = apply(matrix.after.end, 1, function(x) length(which(x == "-")))[3:nrow(matrix.after.end)]
-    names(num.hyphens[which(num.hyphens == max(num.hyphens))])
-  }
+	print("coords")
+	#if(length(coords) > 500) stop()
+	print(coords)
 
-  seq.to.rm = get.sequence.to.remove(mult.align1)
+	snps.smaller.than.start = length(coords$snp.coords[which(coords$snp.coords < coords$start.coord)])
 
-  homo.update = which(homologue.names == seq.to.rm)
-  var.update = which(variety.names == seq.to.rm)
+	snps.bigger.than.end = length(coords$snp.coords[which(coords$snp.coords > coords$end.coord)])
 
-  if(length(homo.update) > 0){
-    homologue.rows = homologue.rows[1:(length(homologue.rows) - length(homo.update))]
-    } 
-    variety.rows = variety.rows = variety.rows - length(homo.update)
-  if(length(var.update) > 0){
-     variety.rows = variety.rows[1:(length(variety.rows) - length(var.update))] 
-    }
+	homologue.names = rownames(mult.align1)[homologue.rows]
+	variety.names = rownames(mult.align1)[variety.rows]
 
-  print("seq.to.rm")
-  print(seq.to.rm)
+	while.counter = 1
+	while(snps.smaller.than.start < 2){ 
+	  #check if less than 2 coordinates that are smaller than the start sequence
+	  #if so, one of the sequences included in the multiple alignment could be too divergent.
+	  #Try examining the multiple alignment, checking all homologue sequences (from IWGSC assembly)
+	  #for hyphens before the start coordinate, and remove the sequence with the most hyphens
 
-  number.of.removed.sequences = length(seq.to.rm)
+	  print("Less than 2 SNPs found before start of sequence, removing sequence with most hyphens before start")
 
-  mult.align.1.dnastringset = conv.mult.align.dnastringset(mult.align1)  
+	  get.sequence.to.remove = function(multiple.alignment1){    
+		#analyses a multiple alignment to check which sequence has the most hyphens before 
+		#the start position of the main sequence (row 1). Returns the name of the sequence
+		#with the most hyphens as a character string.
+		#args:
+		# multiple.alignment1 - a DNAMultipleAlignment object
+		mult.align1.mat = as.matrix(multiple.alignment1)
+		start.base.coord = min(grep("A|G|T|C", mult.align1.mat[1, ]))
+		matrix.before.start = mult.align1.mat[, 1:start.base.coord]    
+		#get number of insertions (hyphens) in each sequence - exclude input sequence and its closest BLAST hit
+		#from the evaulation 
+		num.hyphens = apply(matrix.before.start, 1, function(x) length(which(x == "-")))[3:nrow(matrix.before.start)]
+		names(num.hyphens[which(num.hyphens == max(num.hyphens))])
+	  }
 
-  mult.align1.dnastringset2 = mult.align.1.dnastringset[-which(names(mult.align.1.dnastringset) %in% seq.to.rm)]
+	  seq.to.rm = get.sequence.to.remove(mult.align1)
 
-  writeXStringSet(mult.align.1.dnastringset, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.old_end_", while.counter, ".fa"))
+	  homo.update = which(homologue.names == seq.to.rm)
+	  var.update = which(variety.names == seq.to.rm)
 
-  print(p("Alignment: all.align.old", while.counter, ".fa"))
-  while.counter = while.counter + 1
+	  if(length(homo.update) > 0){
+		homologue.rows = homologue.rows[1:(length(homologue.rows) - length(homo.update))]
+		} 
+		variety.rows = variety.rows = variety.rows - length(homo.update)
+	  if(length(var.update) > 0){
+		 variety.rows = variety.rows[1:(length(variety.rows) - length(var.update))] 
+		}
 
-  #write multiple alignment without the sequence with the most hyphens
-  writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
-  writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
+	  print("seq.to.rm")
+	  print(seq.to.rm)
 
-  mult.align1 = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
-  
-  #if there is more than one sequence with the same number of hyphens, they will both be removed. if this is the case,
-  #we need to assign new homologue rows according to the number of sequences that were removed.
-  # homo.end = (nrow(mult.align1) - (number.genomes - number.of.removed.sequences))
-  # homologue.rows = 3:homo.end
-  #if two varietal sequences are removed at the same time, this can create false assignment of a varietal sequence as a homologue.
-  # if(homo.end < 3) homologue.rows = 3
+	  number.of.removed.sequences = length(seq.to.rm)
 
-  if(number.genomes > 1){
-  homologous.snps = grab.homeologous.snps_orig(variety.rows, homologue.rows, mult.align1, F, T)  
-  } else {
-    homologous.snps = grab.homeologous.snps_new(main.gene.row, template.row, homologue.rows, mult.align1)  
-  }
+	  mult.align.1.dnastringset = conv.mult.align.dnastringset(mult.align1)  
 
-  main.start.end = get.start.and.end.base(mult.align1, main.gene.row)
+	  mult.align1.dnastringset2 = mult.align.1.dnastringset[-which(names(mult.align.1.dnastringset) %in% seq.to.rm)]
 
-  coords = get.coordinates.after.removing.hyphens(mult.align1, template.row, homologous.snps, main.start.end[1], main.start.end[2])
+	  writeXStringSet(mult.align.1.dnastringset, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.old", while.counter, ".fa"))
 
-  print(coords)
+	  print(p("Alignment: all.align.old", while.counter, ".fa"))
+	  while.counter = while.counter + 1
 
-  snps.bigger.than.end = length(coords$snp.coords[which(coords$snp.coords < coords$start.coord)])  
+	  #write multiple alignment without the sequence with the most hyphens
+	  writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
+	  writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
+
+	  mult.align1 = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
+	  
+	  #if there is more than one sequence with the same number of hyphens, they will both be removed. if this is the case,
+	  #we need to assign new homologue rows according to the number of sequences that were removed.
+	  # homo.end = (nrow(mult.align1) - (number.genomes - number.of.removed.sequences))
+	  # homologue.rows = 3:homo.end
+	  #if two varietal sequences are removed at the same time, this can create false assignment of a varietal sequence as a homologue.
+	  # if(homo.end < 3) homologue.rows = 3
+
+	  # variety.rows = (max(homologue.rows) + 1):nrow(mult.align1)
+
+	  if(number.genomes > 1){
+	  homologous.snps = grab.homeologous.snps_orig(variety.rows, homologue.rows, mult.align1, F, T)  
+	  } else {
+		homologous.snps = grab.homeologous.snps_new(main.gene.row, template.row, homologue.rows, mult.align1)  
+	  }
+
+	  main.start.end = get.start.and.end.base(mult.align1, main.gene.row)
+
+	  coords = get.coordinates.after.removing.hyphens(mult.align1, template.row, homologous.snps, main.start.end[1], main.start.end[2])
+
+	  print(coords)
+
+	  snps.smaller.than.start = length(coords$snp.coords[which(coords$snp.coords < coords$start.coord)])  
+	}
+
+	print("snps.bigger.than.end")
+	print(snps.bigger.than.end)
+
+	while.counter = 1
+	while(snps.bigger.than.end < 2){ 
+	  #check if less than 2 coordinates that are smaller than the start sequence
+	  #if so, one of the sequences included in the multiple alignment could be too divergent.
+	  #Try examining the multiple alignment, checking all homologue sequences (from IWGSC assembly)
+	  #for hyphens before the start coordinate, and remove the sequence with the most hyphens
+
+	  print("Less than 2 SNPs found after end of sequence, removing sequence with most hyphens after end")
+
+	  get.sequence.to.remove = function(multiple.alignment1){    
+		#analyses a multiple alignment to check which sequence has the most hyphens before 
+		#the start position of the main sequence (row 1). Returns the name of the sequence
+		#with the most hyphens as a character string.
+		#args:
+		# multiple.alignment1 - a DNAMultipleAlignment object
+		mult.align1.mat = as.matrix(multiple.alignment1)
+		end.base.coord = max(grep("A|G|T|C", mult.align1.mat[1, ]))
+		matrix.after.end = mult.align1.mat[, end.base.coord:ncol(mult.align1.mat)]    
+		#get number of insertions (hyphens) in each sequence - exclude input sequence and its closest BLAST hit
+		#from the evaulation 
+		num.hyphens = apply(matrix.after.end, 1, function(x) length(which(x == "-")))[3:nrow(matrix.after.end)]
+		names(num.hyphens[which(num.hyphens == max(num.hyphens))])
+	  }
+
+	  seq.to.rm = get.sequence.to.remove(mult.align1)
+
+	  homo.update = which(homologue.names == seq.to.rm)
+	  var.update = which(variety.names == seq.to.rm)
+
+	  if(length(homo.update) > 0){
+		homologue.rows = homologue.rows[1:(length(homologue.rows) - length(homo.update))]
+		} 
+		variety.rows = variety.rows = variety.rows - length(homo.update)
+	  if(length(var.update) > 0){
+		 variety.rows = variety.rows[1:(length(variety.rows) - length(var.update))] 
+		}
+
+	  print("seq.to.rm")
+	  print(seq.to.rm)
+
+	  number.of.removed.sequences = length(seq.to.rm)
+
+	  mult.align.1.dnastringset = conv.mult.align.dnastringset(mult.align1)  
+
+	  mult.align1.dnastringset2 = mult.align.1.dnastringset[-which(names(mult.align.1.dnastringset) %in% seq.to.rm)]
+
+	  writeXStringSet(mult.align.1.dnastringset, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.old_end_", while.counter, ".fa"))
+
+	  print(p("Alignment: all.align.old", while.counter, ".fa"))
+	  while.counter = while.counter + 1
+
+	  #write multiple alignment without the sequence with the most hyphens
+	  writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
+	  writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
+
+	  mult.align1 = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
+	  
+	  #if there is more than one sequence with the same number of hyphens, they will both be removed. if this is the case,
+	  #we need to assign new homologue rows according to the number of sequences that were removed.
+	  # homo.end = (nrow(mult.align1) - (number.genomes - number.of.removed.sequences))
+	  # homologue.rows = 3:homo.end
+	  #if two varietal sequences are removed at the same time, this can create false assignment of a varietal sequence as a homologue.
+	  # if(homo.end < 3) homologue.rows = 3
+
+	  if(number.genomes > 1){
+	  homologous.snps = grab.homeologous.snps_orig(variety.rows, homologue.rows, mult.align1, F, T)  
+	  } else {
+		homologous.snps = grab.homeologous.snps_new(main.gene.row, template.row, homologue.rows, mult.align1)  
+	  }
+
+	  main.start.end = get.start.and.end.base(mult.align1, main.gene.row)
+
+	  coords = get.coordinates.after.removing.hyphens(mult.align1, template.row, homologous.snps, main.start.end[1], main.start.end[2])
+
+	  print(coords)
+
+	  snps.bigger.than.end = length(coords$snp.coords[which(coords$snp.coords < coords$start.coord)])  
+	}
+	output.list1 = list(coords, homologous.snps)
+	names(output.list1) = c("coords", "homologous.snps")
+	output.list1
 }
 
 
 #   ____________________________________________________________________________
 #   BEGIN MAIN LOOP                                                         ####
 
-find.best.primers = function(multiple.alignment, template.sequence.row.number, snp.coords.after.filter, start.coord.after.filter, end.coord.after.filter, product.size.range, span.whole.gene, start.buffer){
+find.best.primers = function(multiple.alignment, template.sequence.row.number, snp.coords.after.filter, start.coord.after.filter, end.coord.after.filter, product.size.range, span.whole.gene, start.buffer, homologous.snps, coords){
   #Automatically obtains primer sequences
   #args:
   # multiple.alignment - a DNAMultipleAlignment object
@@ -815,11 +884,23 @@ generate.best.primer.set(forward.all.pen, reverse.all.pen, used.coords1[[1]], us
 
 }
 
+snp.information = auto_remove_sequences_and_detect_snps()
+
+if(ONLY.SNP.SELECTION == T){
+	snp.info1 = generate_align_w_snps()
+	all.snps1 = data.frame(which(snp.info1$homologous.snps == 1))
+	colnames(all.snps1) = "snps"
+	if(!file.exists(p(project.path, "jobs/", gene.name, "/seq/extended/SNPs"))){
+		dir.create(p(project.path, "jobs/", gene.name, "/seq/extended/SNPs"))
+	}
+	writeLines(as.character(all.snps1$snps), p(project.path, "jobs/", gene.name, "/seq/extended/SNPs/snps.txt"))
+	writeLines(as.character(snp.info1$main.start.end), p(project.path, "jobs/", gene.name, "/seq/extended/SNPs/start.end.pos.txt"))
+} else {
 
 if(full.gene.product == T){
-  find.best.primers(mult.align1, template.row, coords[[1]], coords[[2]], coords[[3]], c(1, 100000), T)  
+  find.best.primers(mult.align1, template.row, coords[[1]], coords[[2]], coords[[3]], c(1, 100000), T, coords = snp.information$coords, homologous.snps = snp.information$homologous.snps)
 } else {
-  find.best.primers(mult.align1, template.row, coords[[1]], coords[[2]], coords[[3]], c(min.product.size, max.product.size), F)  
+  find.best.primers(mult.align1, template.row, coords[[1]], coords[[2]], coords[[3]], c(min.product.size, max.product.size), F, coords = snp.information$coords, homologous.snps = snp.information$homologous.snps)  
 }
 
-
+}
