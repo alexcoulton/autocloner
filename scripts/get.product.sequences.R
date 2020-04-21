@@ -1,4 +1,3 @@
-
 #FOR SANGER SEQUENCING. 
 #Reads primer3 output, then splits the products into smaller sequences for sanger sequencing.
 #Then generates primer3 input files to find primers for these smaller sequences.

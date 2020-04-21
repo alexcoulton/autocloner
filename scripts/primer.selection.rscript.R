@@ -663,78 +663,78 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
         forward.output.files = list.files(p(project.path, "jobs/", gene.name, "/primers/output/"), pattern = "F")
         reverse.output.files = list.files(p(project.path, "jobs/", gene.name, "/primers/output/"), pattern = "R")
 
-		primer.attributes1 = c('PRIMER_LEFT_0_PENALTY', 'PRIMER_LEFT_0_SEQUENCE', 'PRIMER_LEFT_0', 'PRIMER_LEFT_0_TM',
-		'PRIMER_LEFT_0_GC_PERCENT', 'PRIMER_LEFT_0_SELF_ANY_TH', 'PRIMER_LEFT_0_SELF_END_TH',
-		'PRIMER_LEFT_0_HAIRPIN_TH', 'PRIMER_LEFT_0_END_STABILITY')
+        primer.attributes1 = c('PRIMER_LEFT_0_PENALTY', 'PRIMER_LEFT_0_SEQUENCE', 'PRIMER_LEFT_0', 'PRIMER_LEFT_0_TM',
+        'PRIMER_LEFT_0_GC_PERCENT', 'PRIMER_LEFT_0_SELF_ANY_TH', 'PRIMER_LEFT_0_SELF_END_TH',
+        'PRIMER_LEFT_0_HAIRPIN_TH', 'PRIMER_LEFT_0_END_STABILITY')
 
-		primer.attributes2 = c('PRIMER_RIGHT_0_PENALTY', 'PRIMER_RIGHT_0_SEQUENCE', 'PRIMER_RIGHT_0', 'PRIMER_RIGHT_0_TM',
-		'PRIMER_RIGHT_0_GC_PERCENT', 'PRIMER_RIGHT_0_SELF_ANY_TH', 'PRIMER_RIGHT_0_SELF_END_TH',
-		'PRIMER_RIGHT_0_HAIRPIN_TH', 'PRIMER_RIGHT_0_END_STABILITY')
+        primer.attributes2 = c('PRIMER_RIGHT_0_PENALTY', 'PRIMER_RIGHT_0_SEQUENCE', 'PRIMER_RIGHT_0', 'PRIMER_RIGHT_0_TM',
+        'PRIMER_RIGHT_0_GC_PERCENT', 'PRIMER_RIGHT_0_SELF_ANY_TH', 'PRIMER_RIGHT_0_SELF_END_TH',
+        'PRIMER_RIGHT_0_HAIRPIN_TH', 'PRIMER_RIGHT_0_END_STABILITY')
 
-        output.forward.penalties = lapply(forward.output.files, function(x){
-			current.file = paste(project.path, "jobs/", gene.name, "/primers/output/", x, sep = "")
-			current.file.lines = readLines(current.file)
-			if(length(grep("PRIMER_LEFT_0_PENALTY", current.file.lines)) > 0){
-				parsep3val = function(primer.attribute){
-					pen1 = current.file.lines[grep(primer.attribute, current.file.lines)]
-					pen1 = strsplit(pen1, "=")
-					return(pen1[[1]][2])
-				}
-				primer.values1 = sapply(primer.attributes1, parsep3val)
-				primer.values1 = do.call(data.frame, as.list(primer.values1))
-				colnames(primer.values1) = primer.attributes1												
-				primer.values1
-			} else {
-				g = do.call(data.frame, as.list(rep("-", length(primer.attributes1))))
-				colnames(g) = primer.attributes1
-				return(g) #if no PRIMER_PAIR_0_PENALTY in output file, return arbitrarily large penalty
-			}
+            output.forward.penalties = lapply(forward.output.files, function(x){
+          current.file = paste(project.path, "jobs/", gene.name, "/primers/output/", x, sep = "")
+          current.file.lines = readLines(current.file)
+          if(length(grep("PRIMER_LEFT_0_PENALTY", current.file.lines)) > 0){
+            parsep3val = function(primer.attribute){
+              pen1 = current.file.lines[grep(primer.attribute, current.file.lines)]
+              pen1 = strsplit(pen1, "=")
+              return(pen1[[1]][2])
+            }
+            primer.values1 = sapply(primer.attributes1, parsep3val)
+            primer.values1 = do.call(data.frame, as.list(primer.values1))
+            colnames(primer.values1) = primer.attributes1												
+            primer.values1
+          } else {
+            g = do.call(data.frame, as.list(rep("-", length(primer.attributes1))))
+            colnames(g) = primer.attributes1
+            return(g) #if no PRIMER_PAIR_0_PENALTY in output file, return arbitrarily large penalty
+          }
+            })
+
+            output.reverse.penalties = lapply(reverse.output.files, function(x){
+          current.file = paste(project.path, "jobs/", gene.name, "/primers/output/", x, sep = "")
+          current.file.lines = readLines(current.file)
+          if(length(grep("PRIMER_LEFT_0_PENALTY", current.file.lines)) > 0){		
+            parsep3val = function(primer.attribute){
+              pen1 = current.file.lines[grep(primer.attribute, current.file.lines)]
+              pen1 = strsplit(pen1, "=")
+              return(pen1[[1]][2])
+            }
+            primer.values1 = sapply(primer.attributes2, parsep3val)
+            primer.values1 = do.call(data.frame, as.list(primer.values1))
+            colnames(primer.values1) = primer.attributes2												
+            primer.values1							
+          } else {
+            g = do.call(data.frame, as.list(rep("-", length(primer.attributes1))))
+            colnames(g) = primer.attributes2
+            return(g) #if no PRIMER_PAIR_0_PENALTY in output file, return arbitrarily large penalty
+          }
         })
 
-        output.reverse.penalties = lapply(reverse.output.files, function(x){
-			current.file = paste(project.path, "jobs/", gene.name, "/primers/output/", x, sep = "")
-			current.file.lines = readLines(current.file)
-			if(length(grep("PRIMER_LEFT_0_PENALTY", current.file.lines)) > 0){		
-				parsep3val = function(primer.attribute){
-					pen1 = current.file.lines[grep(primer.attribute, current.file.lines)]
-					pen1 = strsplit(pen1, "=")
-					return(pen1[[1]][2])
-				}
-				primer.values1 = sapply(primer.attributes2, parsep3val)
-				primer.values1 = do.call(data.frame, as.list(primer.values1))
-				colnames(primer.values1) = primer.attributes2												
-				primer.values1							
-			} else {
-				g = do.call(data.frame, as.list(rep("-", length(primer.attributes1))))
-				colnames(g) = primer.attributes2
-				return(g) #if no PRIMER_PAIR_0_PENALTY in output file, return arbitrarily large penalty
-			}
-		})
-
-		output.forward.penalties = bind_rows(output.forward.penalties)
-		output.reverse.penalties = bind_rows(output.reverse.penalties)		
+        output.forward.penalties = bind_rows(output.forward.penalties)
+        output.reverse.penalties = bind_rows(output.reverse.penalties)		
 
         #process forward primer3 output files 
         forward.primer.coords = as.numeric(multi.str.split(multi.str.split(forward.output.files, "-", 1), "\\.", 2)) - 1
-		forward.all.pen = output.forward.penalties
-		forward.all.pen$p.name = forward.output.files
-		forward.all.pen$pos = forward.primer.coords
-		colnames(forward.all.pen)[1] = "pen"		
-		forward.all.pen = forward.all.pen[c(10, 11, 1, 2:9)]
-		forward.all.pen = forward.all.pen[sort(forward.all.pen$pos, index.return = T)$ix, ]
-		noresult.coord = which(forward.all.pen$pen == '-')
-		if(length(noresult.coord) > 0) forward.all.pen = forward.all.pen[-noresult.coord, ]         
+        forward.all.pen = output.forward.penalties
+        forward.all.pen$p.name = forward.output.files
+        forward.all.pen$pos = forward.primer.coords
+        colnames(forward.all.pen)[1] = "pen"		
+        forward.all.pen = forward.all.pen[c(10, 11, 1, 2:9)]
+        forward.all.pen = forward.all.pen[sort(forward.all.pen$pos, index.return = T)$ix, ]
+        noresult.coord = which(forward.all.pen$pen == '-')
+        if(length(noresult.coord) > 0) forward.all.pen = forward.all.pen[-noresult.coord, ]         
 
-		#process reverse primer3 output files
-		reverse.primer.coords = as.numeric(multi.str.split(multi.str.split(reverse.output.files, "-", 1), "\\.", 2)) - 1
-		reverse.all.pen = output.reverse.penalties
-		reverse.all.pen$p.name = reverse.output.files
-		reverse.all.pen$pos = reverse.primer.coords
-		colnames(reverse.all.pen)[1] = "pen"
-		reverse.all.pen = reverse.all.pen[c(10, 11, 1, 2:9)]
-		reverse.all.pen = reverse.all.pen[sort(reverse.all.pen$pos, index.return = T)$ix, ]
-		noresult.coord = which(reverse.all.pen$pen == '-')
-		if(length(noresult.coord) > 0) reverse.all.pen = reverse.all.pen[-noresult.coord, ]           
+        #process reverse primer3 output files
+        reverse.primer.coords = as.numeric(multi.str.split(multi.str.split(reverse.output.files, "-", 1), "\\.", 2)) - 1
+        reverse.all.pen = output.reverse.penalties
+        reverse.all.pen$p.name = reverse.output.files
+        reverse.all.pen$pos = reverse.primer.coords
+        colnames(reverse.all.pen)[1] = "pen"
+        reverse.all.pen = reverse.all.pen[c(10, 11, 1, 2:9)]
+        reverse.all.pen = reverse.all.pen[sort(reverse.all.pen$pos, index.return = T)$ix, ]
+        noresult.coord = which(reverse.all.pen$pen == '-')
+        if(length(noresult.coord) > 0) reverse.all.pen = reverse.all.pen[-noresult.coord, ]           
 
         dir.create(p(project.path, "jobs/", gene.name, "/primers/penalties"))
         write.csv(forward.all.pen, p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv"), row.names = F)

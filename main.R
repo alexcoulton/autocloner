@@ -4,6 +4,7 @@
 #### INIT ####
 
 options(show.error.locations = T)
+options(stringsAsFactors = F)
 options(error = function() { traceback(2); if(!interactive()) quit('no', status = 1, runLast = FALSE) })
 
 suppressMessages(library("optparse"))
@@ -51,7 +52,7 @@ if(number.genomes < 1) {
 			opt = list()		
 			opt$fasta.path = "debug_seq.fa"
 			# opt$sequence.name = "debug_seq"			
-			opt$sequence.name = "job209"		
+			opt$sequence.name = "job216"		
 			opt$product.full.gene = F
 			opt$min.product.size = 400
 			opt$max.product.size = 2000
@@ -125,6 +126,10 @@ if(number.genomes < 1) {
 				print.pipeline.stage(i)
 				source(paste0("./scripts/", i))
 			}
+	}
+
+	run.single.pipeline.stage = function(script.name){
+		source(paste0('./scripts/', script.name))
 	}
 
 	run.adv.primer.select.job = function(){		
