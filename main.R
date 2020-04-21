@@ -35,35 +35,47 @@ if(number.genomes < 1) {
 		make_option(c("--max.product.size", "-M"), type = "integer", default = 1000),
 		make_option(c("--start.buffer", "-s"), type = "integer", default = 2000),
 		make_option(c("--end.buffer", "-e"), type = "integer", default = 2000),
-		make_option(c("--own.alignment.path", "-a"), type = "character", default = ""),
-		# make_option(c("--only.msa", "-q"), action = "store_true", default = F),
-		# make_option(c("--only.primer.selection", "-O"), action = "store_true", default = F),
-		make_option(c("--run.mode", "-r"), type = "character", default = "full") # specify pipeline - "full", "own.align", "only.primer.selection", "only.msa"
+		make_option(c("--own.alignment.path", "-a"), type = "character", default = ""),		
+		make_option(c("--run.mode", "-r"), type = "character", default = "run.full.pipeline"), # specify pipeline - "full", "own.align", "only.primer.selection", "only.msa"
+		make_option(c("--perform.masking"), action = "store_true", default = F), 
+		make_option(c("--mask.bin.size"), type = "integer", default = 10), 
+		make_option(c("--mask.threshold"), type = "integer", default = 40), 
+		make_option(c("--allow.hyphens.in.mask"), action = "store_true", default = F) 
 		)
 
-	opt = parse_args(OptionParser(option_list = option_list))
-
+	opt = parse_args(OptionParser(option_list = option_list))	
 	#### DEBUG OPTIONS ####
 
 	if(exists("autocloner.debug")){
 		if(autocloner.debug == T){
 			opt = list()		
 			opt$fasta.path = "debug_seq.fa"
-			opt$sequence.name = "debug_seq"			
+			# opt$sequence.name = "debug_seq"			
+			opt$sequence.name = "job209"		
 			opt$product.full.gene = F
 			opt$min.product.size = 400
 			opt$max.product.size = 2000
 			opt$start.buffer = 2000
 			opt$end.buffer = 2000
-			opt$run.mode = "only.snp.selection"
-			# opt$only.primer.selection = F
-			opt$own.alignment.path = "" # alignment path
-			# opt$only.msa = F
+			
+			#ALL RUN MODES
+			# opt$run.mode = "run.full.pipeline"
+			# opt$run.mode = "run.pipeline.own.alignment"
+			# opt$run.mode = "run.only.primer.selection"
+			# opt$run.mode = "run.only.msa"
+			# opt$run.mode = "run.only.snp.selection"
+			opt$run.mode = "run.adv.primer.select.job"					
+
+			opt$own.alignment.path = "" # alignment path			
+			opt$perform.masking = F
+			opt$mask.bin.size = 10
+			opt$mask.threshold = 40
+			opt$allow.hyphens.in.mask = "F"
 		}
 	} 
 	
-	muscle.debug = T
-	blast.debug = T
+	muscle.debug = F
+	blast.debug = F
 	
 
 	#### DEFINE FUNCTIONS ####
@@ -92,7 +104,7 @@ if(number.genomes < 1) {
 			remove.hyphens1 = gsub("-", "", remove.hyphens1)
 			writeLines(remove.hyphens1, p(job_directory, opt$sequence.name, "/seq/extended/alignments/all.align.rev.nohyphen.fa"))
 
-			pipeline.stages = c("perform.muscle.R", "rearrange.muscle.rscript.R", "primer.selection.rscript.R",
+			pipeline.stages = c("perform.muscle.R", "rearrange.muscle.rscript.R", "trim.alignment.rscript.R", "primer.selection.rscript.R",
 			  "primer.evaluation.rscript.R", "get.product.sequences.R")
 
 			for(i in pipeline.stages){
@@ -106,7 +118,18 @@ if(number.genomes < 1) {
 			init.new.job()
 
 			pipeline.stages = c("make.fasta.indexes.rscript.R", "perform.blast.rscript.R", "blast.scaffold.parser.rscript.R",
-			 "perform.muscle.R", "rearrange.muscle.rscript.R", "primer.selection.rscript.R",
+			 "perform.muscle.R", "rearrange.muscle.rscript.R", "trim.alignment.rscript.R", "primer.selection.rscript.R",
+			  "primer.evaluation.rscript.R", "get.product.sequences.R")
+
+			for(i in pipeline.stages){
+				print.pipeline.stage(i)
+				source(paste0("./scripts/", i))
+			}
+	}
+
+	run.adv.primer.select.job = function(){		
+		ONLY.PRIMER.SELECTION <<- T
+			pipeline.stages = c("primer.selection.rscript.R",
 			  "primer.evaluation.rscript.R", "get.product.sequences.R")
 
 			for(i in pipeline.stages){
@@ -139,7 +162,7 @@ if(number.genomes < 1) {
 			init.new.job()
 
 			pipeline.stages = c("make.fasta.indexes.rscript.R", "perform.blast.rscript.R", "blast.scaffold.parser.rscript.R",
-			 "perform.muscle.R", "rearrange.muscle.rscript.R")
+			 "perform.muscle.R", "rearrange.muscle.rscript.R", "trim.alignment.rscript.R")
 
 			for(i in pipeline.stages){
 				print.pipeline.stage(i)
@@ -158,11 +181,12 @@ if(number.genomes < 1) {
 		suppressMessages(library(dplyr))
 		suppressMessages(library(tibble))
 
-		if(opt$run.mode == "full") run.full.pipeline()
-		if(opt$run.mode == "own.align") run.pipeline.own.alignment()
-		if(opt$run.mode == "only.primer.selection") run.only.primer.selection()	
-		if(opt$run.mode == "only.msa") run.only.msa()	
-		if(opt$run.mode == "only.snp.selection") run.only.snp.selection()	
+		if(opt$run.mode == "run.full.pipeline") run.full.pipeline()
+		if(opt$run.mode == "run.pipeline.own.alignment") run.pipeline.own.alignment()
+		if(opt$run.mode == "run.only.primer.selection") run.only.primer.selection()	
+		if(opt$run.mode == "run.only.msa") run.only.msa()	
+		if(opt$run.mode == "run.only.snp.selection") run.only.snp.selection()	
+		if(opt$run.mode == "run.adv.primer.select.job") run.adv.primer.select.job()
 
 	}
 }

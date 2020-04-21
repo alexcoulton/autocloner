@@ -76,7 +76,7 @@ for(i in c("set1", "set2")){
 
 		primer.file1 = readLines(p(primer.base.path, x))
 		primer.file1.seq = strsplit(primer.file1[grep("PRIMER_LEFT_0_SEQUENCE", primer.file1)], "=")
-		primer.file1.seq = DNAString(primer.file1.seq[[1]][2])
+		primer.file1.seq = DNAString(primer.file1.seq[[1]][2])		
 
 		primer.file1.multi.forward.pos = strsplit(primer.file1[grep("multiple.alignment.forward.coord", primer.file1)], "=")
 		primer.file1.multi.forward.pos = as.numeric(primer.file1.multi.forward.pos[[1]][2])
