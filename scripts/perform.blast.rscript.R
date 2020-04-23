@@ -8,6 +8,8 @@
 gene.name = opt$sequence.name
 query.fa.path = opt$fasta.path
 
+file.copy(query.fa.path, p("jobs/", gene.name, "/seq/extended/seqs/input_seq.fa"))
+
 query.fa.name = strsplit(query.fa.path, "/")
 query.fa.name = query.fa.name[[1]]
 query.fa.name = query.fa.name[length(query.fa.name)]
@@ -46,7 +48,7 @@ if(blast.debug == T){
 } else {
   system(p("blastn -db ", blastdb.path, " -query ", query.fa.path,
            " -outfmt 6 -out ./jobs/", gene.name, "/blast.results/", x, ".", query.fa.name, ".vs.", genome.name, ".blast",
-           " -num_threads 1 -culling_limit 10"))
+           " -num_threads 6 -culling_limit 10"))
 }
 
 })

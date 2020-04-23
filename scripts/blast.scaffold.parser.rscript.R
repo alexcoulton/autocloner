@@ -1,9 +1,8 @@
-
-
 #BLAST PARSER FOR SCAFFOLDS
 
 gene.name = opt$sequence.name
 fa.path1 = opt$fasta.path
+input_sequence = readDNAStringSet(p("jobs/", gene.name, "/seq/extended/seqs/input_seq.fa"))
 
 #   ____________________________________________________________________________
 #   DEFINE FUNCTIONS                                                        ####
@@ -16,7 +15,7 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
   #args:
   # blastdf1 - a BLAST dataframe imported using read.blast()
   # dist.threshold - Integer; the maximum number of bases between two hits for them to be considered part of the same group
-  blastdf1 = sort.blastdf(blastdf1)
+  blastdf1 = sort.blastdf(blastdf1) 
   
   unique.groups = convert.to.character.data.frame(unique(blastdf1[, 1:2]))
   
@@ -43,9 +42,6 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
         descending1 = F
       }
       
-      # print("x:")
-      # print(x)
-      
       index.over.thres = which(diff(x) > threshold) + 1 #vector of coordinates of elements that need to be split
       
       #if there is more than one group of hits in the cluster, do some processing
@@ -56,19 +52,7 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
         
         new.list2 = list(x[1:(min(index.over.thres) - 1)])
         
-        # print("index.over.thres")
-        # print(index.over.thres)
-        # print("distance.between.split.indices")
-        # print(distance.between.split.indices)
-        
         for(i in 1:length(index.over.thres)){
-          
-          # print("i")
-          # print(i)
-          # print("index.over.thres[i]")
-          # print(index.over.thres[i])
-          # print("distance.between.split.indices[i]")
-          # print(distance.between.split.indices[i])
           
           if(distance.between.split.indices[i] > 1){
             new.list2 = c(new.list2, list(x[index.over.thres[i]:(index.over.thres[i] + distance.between.split.indices[i] - 1)]))
@@ -94,9 +78,10 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
       
     }
     
+    
     #determine whether there is more than one locus involved in this group of hits
     sstart.categories = split.numeric.vector.by.difference(temp.df$sstart, dist.threshold)
-    
+
     #modify temp.df to have unique sseqids for each unique locus (loci more than 10000 bases apart)
     if(length(sstart.categories) > 1){
       temp.df$sseqid = as.character(temp.df$sseqid)
@@ -105,11 +90,7 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
         coords = which(temp.df$sstart %in% sstart.categories[[x]])
         temp.df$sseqid[coords] = paste(temp.df$sseqid[coords], ".!!$", x, sep = "")
       }  
-    }
-    
-    # print("sstart.categories")
-    # print(sstart.categories)
-    
+    }    
     
     #if two groups of hits are present in the same scaffold / chromosome,
     #these hits will no longer be ordered by bitscore due to sort.blastdf()
@@ -121,27 +102,28 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
       mean(as.numeric(temp.df.filtered$bitscore))
     }))
     
-    mean.bitscores.sorted = sort(mean.bitscores, decreasing = T)
-    
-    transformation.coords = match(mean.bitscores.sorted, mean.bitscores)
-    
+    transformation.coords = sort(mean.bitscores, decreasing = T, index.return = T)$ix 
+        
     transformation.coords2 = unlist(lapply(temp.df.unique.scaffolds[transformation.coords], function(x){
       which(x == temp.df$sseqid)
     }))
     
-    temp.df = temp.df[transformation.coords2, ]
+    temp.df = temp.df[transformation.coords2, ]    
+
+    blastdf1[which(blastdf1$qseqid == unique.groups[i, 1] & blastdf1$sseqid == unique.groups[i, 2]), ] = temp.df   
     
+
     for(i2 in 1:length(unique(temp.df$sseqid))){
+      #CONCATENATE GROUPS OF HITS TOGETHER INTO potential.homeologues DATAFRAME
       temp.df2 = filter(temp.df, sseqid == unique(temp.df$sseqid)[i2])
       temp.df2$qseqid = as.character(temp.df2$qseqid)
       temp.df2$sseqid = as.character(temp.df2$sseqid)
       
       min.start = min(temp.df2$sstart)
-      min.end = min(temp.df2$send)
+      min.end = min(temp.df2$send)        
       
-      # print("temp.df2")
-      # print(temp.df2)
-      
+      #are all subhits of the same group in the same orientation?
+      if(length(unique(temp.df2$sstart < temp.df2$send)) != 1) browser()
       
       #populate potential.homeologues dataframe where average bitscore is higher than 200  
       if(mean(temp.df2$bitscore) > 200){
@@ -153,7 +135,12 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
           potential.homeologues$start[nrow(potential.homeologues)] = min(temp.df2$sstart)
           potential.homeologues$end[nrow(potential.homeologues)] = max(temp.df2$send)
           potential.homeologues$avg.bitscore[nrow(potential.homeologues)] = mean(temp.df2$bitscore)
+          potential.homeologues$max.bitscore[nrow(potential.homeologues)] = max(temp.df2$bitscore)
+          potential.homeologues$avg.percent.identical[nrow(potential.homeologues)] = mean(temp.df2$percentage.identical)
           potential.homeologues$rev.comp[nrow(potential.homeologues)] = F
+          potential.homeologues$query.start[nrow(potential.homeologues)] = min(temp.df2$qstart)
+          potential.homeologues$query.end[nrow(potential.homeologues)] = max(temp.df2$qend)
+          potential.homeologues$num_hsp[nrow(potential.homeologues)] = nrow(temp.df2)
         } else {
           #else if this is a reverse complement sequence, do y...
           potential.homeologues = add_row(potential.homeologues)
@@ -162,21 +149,38 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
           potential.homeologues$start[nrow(potential.homeologues)] = min(temp.df2$send)
           potential.homeologues$end[nrow(potential.homeologues)] = max(temp.df2$sstart)
           potential.homeologues$avg.bitscore[nrow(potential.homeologues)] = mean(temp.df2$bitscore)
+          potential.homeologues$max.bitscore[nrow(potential.homeologues)] = max(temp.df2$bitscore)
+          potential.homeologues$avg.percent.identical[nrow(potential.homeologues)] = mean(temp.df2$percentage.identical)
           potential.homeologues$rev.comp[nrow(potential.homeologues)] = T
+          potential.homeologues$query.start[nrow(potential.homeologues)] = min(temp.df2$qstart)
+          potential.homeologues$query.end[nrow(potential.homeologues)] = max(temp.df2$qend)
+          potential.homeologues$num_hsp[nrow(potential.homeologues)] = nrow(temp.df2)
         }
       }
       
-      # print("potential.homeologues")
-      # print(potential.homeologues)
+      
       
       
     }
     
   }
-  
+
+
+
   potential.homeologues$length = as.numeric(potential.homeologues$end) - as.numeric(potential.homeologues$start)
-  potential.homeologues$scaffold = multi.str.split(potential.homeologues$scaffold, "\\.\\!\\!\\$", 1)
-  potential.homeologues  
+  potential.homeologues$groupid = potential.homeologues$scaffold
+  potential.homeologues$scaffold = multi.str.split(potential.homeologues$scaffold, "\\.\\!\\!\\$", 1)    
+  potential.homeologues$homo_length = potential.homeologues$query.end - potential.homeologues$query.start
+
+  # try and identify the matching genomic sequence to the input sequence - avg.bitscore sometimes fails here
+  # e.g. if there is a small exon seperated by an intron from the main sequence, it will bring the avg.bitscore down 
+  identi.coord = which.max((potential.homeologues$homo_length / length(input_sequence[[1]])) * (potential.homeologues$avg.percent.identical / 100)) 
+  g = 1:nrow(potential.homeologues)
+  g = g[-identi.coord]  
+  potential.homeologues = potential.homeologues[c(identi.coord, g), ]  
+  list(potential.homeologues, blastdf1)
+
+  # blastdf1
 }
 
 extract.sequence = function(genome1, blast.df.parsed, row.coords, start.buffer, end.buffer){
@@ -207,9 +211,9 @@ extract.sequence = function(genome1, blast.df.parsed, row.coords, start.buffer, 
   
   #append the start coordinate (in kb) of the blast hit to the name of the sequence for identification later
   names(genome2) = paste(blast.df.parsed$scaffold[row.coords], ".$!", round((as.numeric(blast.df.parsed$start[row.coords]) / 1000)), sep = "")
-print("genome2")  
-print(genome2) 
-  genome2  
+  print("genome2")  
+  print(genome2) 
+    genome2  
 }
 
 #   ____________________________________________________________________________
@@ -224,9 +228,9 @@ config.variables = multi.str.split(config.file, "=", 1)
 #parse number of genomes in configuration file
 number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables, "_", 2)))))
 
-lapply(1:number.genomes, function(x){
+# if(GET_TEMPLATE_SEQUENCE == T){  
   #begin by parsing the config file for the genome name, fasta file path and blastdb path
-  config.settings = config.file[grep(x, config.variables)]
+  config.settings = config.file[grep(1, config.variables)]
   
   config.settings.temp = config.settings[[1]]
   genome.name = strsplit(config.settings.temp[1], "=")
@@ -241,59 +245,222 @@ lapply(1:number.genomes, function(x){
   blastdb.path = blastdb.path[[1]][2]
  
   blast.files = list.files(p("jobs/", gene.name, "/blast.results"))
-  blastdf1 = read.blast(p("jobs/", gene.name, "/blast.results/", blast.files[x]))
+  blastdf1 = read.blast(p("jobs/", gene.name, "/blast.results/", blast.files[1]))
+  blastdf1$sstart.mb = blastdf1$sstart / 1000000
+  blastdf1$send.mb = blastdf1$send / 1000000
+  blastdf_orig = read.blast(p("jobs/", gene.name, "/blast.results/", blast.files[1]))
     
   #read the fasta index for this particular genome
-  fasta.index1 = read.csv(p("./fasta.indexes/", genome.name, ".fa.idx"), stringsAsFactors = F, header = T)
+  fasta.index1 = read.csv(p("./fasta.indexes/", genome.name, ".fa.idx"), stringsAsFactors = F, header = T) 
 
-  #for main genome (first in config.txt), take four best sequences (homologues included)
-  if(x == 1){
-
-    blastdf1.parsed = parse.scaffold.blast(blastdf1, 2000)
-
-    #if there more than 4 good homologue matches, take only 4, if less than 4, take however many there are 
-  print("Number of potential homologues found:")
-	print(nrow(blastdf1.parsed))
-  print("blastdf1.parsed:")
-  print(blastdf1.parsed)
-
-  num.homologues.to.take = 7
-    if(nrow(blastdf1.parsed) >= num.homologues.to.take){
-      blastdf1.parsed = blastdf1.parsed[1:num.homologues.to.take, ]
-    } else {
-      blastdf1.parsed = blastdf1.parsed[1:nrow(blastdf1.parsed), ]
-    }
-
-    #parse the original scaffold name from blastdf1.parsed (remove the appended position in kb)
-    original.scaf.names = multi.str.split(blastdf1.parsed$scaffold, ".$!", 1) 
-
-    genome.assembly.subset = readDNAStringSet(fasta.index1[match(original.scaf.names, fasta.index1$desc), ])
- 
-    sequences = extract.sequence(genome.assembly.subset, blastdf1.parsed, 1:nrow(blastdf1.parsed), 2000, 2000)    
-
-  } else {
-    #for additional varietal genomes (after the first in config.txt), take only the first sequence,
-    #the allele from the same locus as the query
-
-    blastdf1.parsed = parse.scaffold.blast(blastdf1, 2000)[1, ]
-    #parse the original scaffold name from blastdf1.parsed (remove the appended position in kb)
-    original.scaf.names = multi.str.split(blastdf1.parsed$scaffold, ".$!", 1) 
-
-    genome.assembly.subset = readDNAStringSet(fasta.index1[match(original.scaf.names, fasta.index1$desc), ]) 
-
-    sequences = extract.sequence(genome.assembly.subset, blastdf1.parsed, 1, 2000, 2000)        
-  }
-   
-  writeXStringSet(sequences, p("jobs/", gene.name, "/seq/extended/seqs/", x, ".", genome.name, ".seqs.fa"))
+  blastdf1.parsed_orig = parse.scaffold.blast(blastdf1, 2000)[[1]]
+  blastdf1.parsed = parse.scaffold.blast(blastdf1, 2000)[[1]]
   
-})
+  original.scaf.names = multi.str.split(blastdf1.parsed$scaffold, ".$!", 1)   
+  genome.assembly.subset.genomic.match = readDNAStringSet(fasta.index1[match(original.scaf.names[1], fasta.index1$desc), ])
+  template_sequence_genomic = extract.sequence(genome.assembly.subset.genomic.match, blastdf1.parsed[1, ], 1, 1000, 1000)  
 
-if(file.exists(p("jobs/", gene.name, "/seq/extended/seqs/all.fa"))){
-  file.remove(p("jobs/", gene.name, "/seq/extended/seqs/all.fa"))  
-}
+  opt$fasta.path = p("jobs/", gene.name, "/seq/extended/seqs/input_w_flanking.fa")
+  query.fa.path = p("jobs/", gene.name, "/seq/extended/seqs/input_w_flanking.fa")
+  writeXStringSet(template_sequence_genomic, p("jobs/", gene.name, "/seq/extended/seqs/input_w_flanking.fa"))    
+  input_sequence = readDNAStringSet(p("jobs/", gene.name, "/seq/extended/seqs/input_seq.fa"))
+  
+  #SECOND BLAST WITH FLANKING REGIONS OF INPUT SEQUENCE INCLUDED 
+  source("scripts/perform.blast.rscript.R")
 
-#after grabbing all sequences of interest, put them all into one fasta file
-print(p("cat ", fa.path1, " jobs/", gene.name, "/seq/extended/seqs/* > jobs/", gene.name, "/seq/extended/seqs/all.fa"))
-system(p("cat ", fa.path1, " jobs/", gene.name, "/seq/extended/seqs/* > jobs/", gene.name, "/seq/extended/seqs/all.fa"))
+  #### ITERATION TWO ####
+  blast.files = list.files(p("jobs/", gene.name, "/blast.results"))
+  
+  blastdf0 = read.blast(p("jobs/", gene.name, "/blast.results/", blast.files[grep("w_flanking", blast.files)]))
+    
+  #SEQUENCE EXTRACTION WITH FULL TEMPLATE (INCLUDING FLANKING REGIONS)
+  blastdf1.parsed = parse.scaffold.blast(blastdf0, 3500)  
+  coord_to_rm = which(blastdf1.parsed[[1]]$length < 500)
+  if(length(coord_to_rm) > 0) blastdf1.parsed[[1]] = blastdf1.parsed[[1]][-coord_to_rm, ]  
+  
+  
+  genome.assembly.subset.genomic.match = readDNAStringSet(fasta.index1[match(unique(blastdf1.parsed[[1]]$scaffold), fasta.index1$desc), ])
+
+  sequences = DNAStringSet()  
+  
+  for(i in 1:nrow(blastdf1.parsed[[1]])){       
+    #MASKING OF INTER-HSP DISTANCES WITHIN THE SAME GROUP WITH Ns      
+    rev.comp = blastdf1.parsed[[1]][i, ]$rev.comp
+    rchr = blastdf1.parsed[[1]][i, ]$scaffold
+      temp.df = blastdf1.parsed[[2]][which(blastdf1.parsed[[2]]$sseqid == blastdf1.parsed[[1]]$groupid[i]), ]
+      chr = blastdf1.parsed[[1]]$scaffold[i]      
+      if(rev.comp == T){
+        #simply swap these round for rev.comp and do a reverseComplement()
+        temp.df$send_rev = temp.df$sstart
+        temp.df$sstart = temp.df$send
+        temp.df$send = temp.df$send_rev
+      } 
+
+      if(nrow(temp.df) == 1){      
+        
+        if(rev.comp == F) sequences = c(sequences, DNAStringSet(genome.assembly.subset.genomic.match[[chr]][temp.df$sstart[1]:temp.df$send[1]]))
+        if(rev.comp == T) sequences = c(sequences, DNAStringSet(reverseComplement(genome.assembly.subset.genomic.match[[chr]][temp.df$sstart[1]:temp.df$send[1]])))
+      } else {
+
+        temp.df = temp.df[sort(temp.df$sstart, index.return = T)$ix, ]
+
+        if(rev.comp == T) temp.df = temp.df[sort(temp.df$sstart, index.return = T, decreasing = T)$ix, ]
+
+        group.subsequences = DNAStringSet()
+        subseq.differences = as.numeric()        
+        for(x in 1:nrow(temp.df)){
+          if(all(temp.df$sstart < temp.df$send)){
+            if(rev.comp == F) group.subsequences = c(group.subsequences, DNAStringSet(genome.assembly.subset.genomic.match[[chr]][temp.df$sstart[x]:temp.df$send[x]]))
+            if(rev.comp == T) group.subsequences = c(group.subsequences, DNAStringSet(reverseComplement(genome.assembly.subset.genomic.match[[chr]][temp.df$sstart[x]:temp.df$send[x]])))
+          }     
+
+          if(x != nrow(temp.df)){
+            #calculate how far apart the HSPs are
+            subseq.differences = c(subseq.differences, abs(temp.df$send[x] - temp.df$sstart[(x + 1)]))
+          }
+        }
+        
+        #combine HSPs with interleaving regions masked by Ns
+        subseq.gaps = lapply(subseq.differences, function(x) DNAStringSet(DNAString(paste(rep("N", 100), collapse = ""))))
+        subsequences.w.gaps = DNAStringSet()
+        for(x in 1:length(group.subsequences)){            
+          subsequences.w.gaps = c(subsequences.w.gaps, group.subsequences[x])
+          if(x != length(group.subsequences)) subsequences.w.gaps = c(subsequences.w.gaps, subseq.gaps[[x]])
+        }
+
+        masked.subsequence = DNAStringSet(DNAString(do.call(paste0, lapply(subsequences.w.gaps, as.character)))) 
+        sequences = c(sequences, masked.subsequence)           
+      }
+  }
+  
+  names(sequences) = paste0(blastdf1.parsed[[1]]$scaffold, "_", blastdf1.parsed[[1]]$query.start)  
+  
+  #SETUP ANCHOR POINTS FOR DIALIGN
+  coord.query.start = c(1, sort(blastdf1.parsed[[1]]$query.start[2:nrow(blastdf1.parsed[[1]])], index.return = T)$ix + 1)
+  blastdf1.parsed[[1]] = blastdf1.parsed[[1]][coord.query.start, ]
+  sequences = sequences[coord.query.start]
+  
+  sequences = c(DNAStringSet(input_sequence), sequences)
+
+  sequences     
+  
+  g = blastdf1.parsed[[2]]
+  g = g[which(g$sseqid == "chr4B"), ]
+
+  dialign.df1 = blastdf1.parsed[[1]]
+  dialign.df1$dialign1 = 1 #position of the first sequence to be anchored
+  dialign.df1$dialign2 = 1:nrow(dialign.df1) #position of the second sequence to be anchored
+  dialign.df1$dialign3 = dialign.df1$query.start #beginning position of the anchor point in sequence 1
+  dialign.df1$dialign4 = 1 #beginning position of the anchor point in sequence 2
+  dialign.df1$dialign5 = 5 #length of anchor
+  dialign.df1$dialign6 = 20 #anchor priority
+  dialign.df1 = dialign.df1[-1, ]
+
+  # dialign.df2 = blastdf1.parsed[[1]]
+  # dialign.df2$dialign1 = 1  
+  # dialign.df2$dialign2 = 1:nrow(dialign.df2)
+  # dialign.df2$dialign3 = dialign.df2$query.end
+  # dialign.df2$dialign4 = (dialign.df2$length - 3)
+  # dialign.df2$dialign5 = 3
+  # dialign.df2$dialign6 = 10
+  # dialign.df2 = dialign.df2[-1, ]  
+
+  # dialign_anchors = rbind(dialign.df1, dialign.df2)  
+  # dialign_anchors = dialign_anchors[, grep('dialign', colnames(dialign_anchors))]
+
+  dialign.df1 = dialign.df1[, grep('dialign', colnames(dialign.df1))]
+  new_dialign_anchors = dialign.df1
+  # new_dialign_anchors = matrix(nrow = nrow(dialign_anchors) + 1, ncol = ncol(dialign_anchors))
+  # new_dialign_anchors[1:nrow(dialign_anchors), ] = as.matrix(dialign_anchors)
+  # ndar = nrow(new_dialign_anchors)
+  # ndac = ncol(new_dialign_anchors)   
+  new_dialign_anchors[, 1] = new_dialign_anchors[, 1] + 1
+  new_dialign_anchors[, 2] = new_dialign_anchors[, 2] + 1
+
+  # new_dialign_anchors[ndar - 1, ] = c(2, 1, 1000, 1, 5, 20) #add in start anchor for input sequence
+  # new_dialign_anchors[ndar, ] = c(2, 1, (length(sequences[[1]]) - 5), (length(input_sequence[[1]]) - 5), 5, 20) #add in end anchor for input sequence  
+  
+
+  write.table(new_dialign_anchors, p("jobs/", gene.name, "/seq/extended/seqs/all.anc"), quote = F, sep = " ", col.names = F, row.names = F)
+  writeXStringSet(sequences, p("jobs/", gene.name, "/seq/extended/seqs/all.fa"))
+
+  system(p("scripts/run.dialign.sh jobs/", gene.name, "/"))
+
+# } else {
 
 
+# lapply(1:number.genomes, function(x){
+#   #begin by parsing the config file for the genome name, fasta file path and blastdb path
+#   config.settings = config.file[grep(x, config.variables)]
+  
+#   config.settings.temp = config.settings[[1]]
+#   genome.name = strsplit(config.settings.temp[1], "=")
+#   genome.name = genome.name[[1]][2]
+  
+#   config.settings.temp = config.settings[[2]]
+#   fa.path = strsplit(config.settings.temp[1], "=")
+#   fa.path = fa.path[[1]][2]
+  
+#   config.settings.temp = config.settings[[3]]
+#   blastdb.path = strsplit(config.settings.temp[1], "=")
+#   blastdb.path = blastdb.path[[1]][2]
+ 
+#   blast.files = list.files(p("jobs/", gene.name, "/blast.results"))
+#   blastdf1 = read.blast(p("jobs/", gene.name, "/blast.results/", blast.files[x]))
+    
+#   #read the fasta index for this particular genome
+#   fasta.index1 = read.csv(p("./fasta.indexes/", genome.name, ".fa.idx"), stringsAsFactors = F, header = T)
+
+#   #for main genome (first in config.txt), take four best sequences (homologues included)
+#   if(x == 1){    
+#     blastdf1.parsed = parse.scaffold.blast(blastdf1, 2000)
+
+#     #if there more than 4 good homologue matches, take only 4, if less than 4, take however many there are 
+#   print("Number of potential homologues found:")
+# 	print(nrow(blastdf1.parsed))
+#   print("blastdf1.parsed:")
+#   print(blastdf1.parsed)
+
+#   num.homologues.to.take = opt$number.homologues
+#   if(opt$all.homologues == T) num.homologues.to.take = nrow(blastdf1.parsed)
+#     if(nrow(blastdf1.parsed) >= num.homologues.to.take){
+#       blastdf1.parsed = blastdf1.parsed[1:num.homologues.to.take, ]
+#     } else {
+#       blastdf1.parsed = blastdf1.parsed[1:nrow(blastdf1.parsed), ]
+#     }
+
+#     #parse the original scaffold name from blastdf1.parsed (remove the appended position in kb)
+#     original.scaf.names = multi.str.split(blastdf1.parsed$scaffold, ".$!", 1) 
+
+#     genome.assembly.subset = readDNAStringSet(fasta.index1[match(original.scaf.names, fasta.index1$desc), ])
+ 
+#     sequences = extract.sequence(genome.assembly.subset, blastdf1.parsed, 1:nrow(blastdf1.parsed), 2000, 2000)    
+
+#   } else {
+#     #for additional varietal genomes (after the first in config.txt), take only the first sequence,
+#     #the allele from the same locus as the query
+
+#     blastdf1.parsed = parse.scaffold.blast(blastdf1, 2000)[1, ]
+#     #parse the original scaffold name from blastdf1.parsed (remove the appended position in kb)
+#     original.scaf.names = multi.str.split(blastdf1.parsed$scaffold, ".$!", 1) 
+
+#     genome.assembly.subset = readDNAStringSet(fasta.index1[match(original.scaf.names, fasta.index1$desc), ]) 
+
+#     sequences = extract.sequence(genome.assembly.subset, blastdf1.parsed, 1, 2000, 2000)        
+#   }
+   
+#   writeXStringSet(sequences, p("jobs/", gene.name, "/seq/extended/seqs/", x, ".", genome.name, ".seqs.fa"))
+  
+# })
+
+# if(file.exists(p("jobs/", gene.name, "/seq/extended/seqs/all.fa"))){
+#   file.remove(p("jobs/", gene.name, "/seq/extended/seqs/all.fa"))  
+# }
+
+# #after grabbing all sequences of interest, put them all into one fasta file
+# print(p("cat ", fa.path1, " jobs/", gene.name, "/seq/extended/seqs/* > jobs/", gene.name, "/seq/extended/seqs/all.fa"))
+# system(p("cat ", fa.path1, " jobs/", gene.name, "/seq/extended/seqs/* > jobs/", gene.name, "/seq/extended/seqs/all.fa"))
+
+
+
+# }

@@ -41,7 +41,9 @@ if(number.genomes < 1) {
 		make_option(c("--perform.masking"), action = "store_true", default = F), 
 		make_option(c("--mask.bin.size"), type = "integer", default = 10), 
 		make_option(c("--mask.threshold"), type = "integer", default = 40), 
-		make_option(c("--allow.hyphens.in.mask"), action = "store_true", default = F) 
+		make_option(c("--allow.hyphens.in.mask"), action = "store_true", default = F),
+		make_option(c("--number.homologues"), type = "integer", default = 4),
+		make_option(c("--all.homologues"), action = "store_true", default = F)
 		)
 
 	opt = parse_args(OptionParser(option_list = option_list))	
@@ -50,9 +52,9 @@ if(number.genomes < 1) {
 	if(exists("autocloner.debug")){
 		if(autocloner.debug == T){
 			opt = list()		
-			opt$fasta.path = "debug_seq.fa"
+			opt$fasta.path = "debug_seq4.fa"
 			# opt$sequence.name = "debug_seq"			
-			opt$sequence.name = "job216"		
+			opt$sequence.name = "dialign.test4"		
 			opt$product.full.gene = F
 			opt$min.product.size = 400
 			opt$max.product.size = 2000
@@ -60,18 +62,20 @@ if(number.genomes < 1) {
 			opt$end.buffer = 2000
 			
 			#ALL RUN MODES
-			# opt$run.mode = "run.full.pipeline"
+			opt$run.mode = "run.full.pipeline"
 			# opt$run.mode = "run.pipeline.own.alignment"
 			# opt$run.mode = "run.only.primer.selection"
 			# opt$run.mode = "run.only.msa"
 			# opt$run.mode = "run.only.snp.selection"
-			opt$run.mode = "run.adv.primer.select.job"					
+			# opt$run.mode = "run.adv.primer.select.job"					
 
 			opt$own.alignment.path = "" # alignment path			
 			opt$perform.masking = F
 			opt$mask.bin.size = 10
 			opt$mask.threshold = 40
 			opt$allow.hyphens.in.mask = "F"
+			opt$number.homologues = 4			
+			opt$all.homologues = T
 		}
 	} 
 	
@@ -118,9 +122,17 @@ if(number.genomes < 1) {
 		#full run of pipeline
 			init.new.job()
 
+			# pipeline.stages = c("make.fasta.indexes.rscript.R", "perform.blast.rscript.R", "blast.scaffold.parser.rscript.R",
+			# "perform.muscle.R", "rearrange.muscle.rscript.R", "trim.alignment.rscript.R", "primer.selection.rscript.R",
+			# "primer.evaluation.rscript.R", "get.product.sequences.R")
+			
+			# pipeline.stages = c("make.fasta.indexes.rscript.R", "perform.blast.rscript.R", "blast.scaffold.parser.rscript.R",
+			# "run.dialign.R", "trim.alignment.rscript.R", "primer.selection.rscript.R",
+			# "primer.evaluation.rscript.R", "get.product.sequences.R")
+
 			pipeline.stages = c("make.fasta.indexes.rscript.R", "perform.blast.rscript.R", "blast.scaffold.parser.rscript.R",
-			 "perform.muscle.R", "rearrange.muscle.rscript.R", "trim.alignment.rscript.R", "primer.selection.rscript.R",
-			  "primer.evaluation.rscript.R", "get.product.sequences.R")
+			"run.dialign.R")
+
 
 			for(i in pipeline.stages){
 				print.pipeline.stage(i)
@@ -168,6 +180,10 @@ if(number.genomes < 1) {
 
 			pipeline.stages = c("make.fasta.indexes.rscript.R", "perform.blast.rscript.R", "blast.scaffold.parser.rscript.R",
 			 "perform.muscle.R", "rearrange.muscle.rscript.R", "trim.alignment.rscript.R")
+
+
+			pipeline.stages = c("make.fasta.indexes.rscript.R", "perform.blast.rscript.R", "blast.scaffold.parser.rscript.R",
+			"run.dialign.R")
 
 			for(i in pipeline.stages){
 				print.pipeline.stage(i)

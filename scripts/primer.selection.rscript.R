@@ -924,9 +924,11 @@ if(exists('ONLY.SNP.SELECTION')){
 
 if(full.gene.product == T){
   snp.information = auto_remove_sequences_and_detect_snps()
+  coords = snp.information[[1]]
   find.best.primers(mult.align1, template.row, coords[[1]], coords[[2]], coords[[3]], c(1, 100000), T, coords = snp.information$coords, homologous.snps = snp.information$homologous.snps)
 } else {
   snp.information = auto_remove_sequences_and_detect_snps()
+  coords = snp.information[[1]]  
   find.best.primers(mult.align1, template.row, coords[[1]], coords[[2]], coords[[3]], c(min.product.size, max.product.size), F, coords = snp.information$coords, homologous.snps = snp.information$homologous.snps)  
 }
 
