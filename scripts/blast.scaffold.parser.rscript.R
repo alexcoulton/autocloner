@@ -117,7 +117,7 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
       #CONCATENATE GROUPS OF HITS TOGETHER INTO potential.homeologues DATAFRAME
       temp.df2 = filter(temp.df, sseqid == unique(temp.df$sseqid)[i2])
       temp.df2$qseqid = as.character(temp.df2$qseqid)
-      temp.df2$sseqid = as.character(temp.df2$sseqid)
+      temp.df2$sseqid = as.character(temp.df2$sseqid)      
       
       min.start = min(temp.df2$sstart)
       min.end = min(temp.df2$send)        
@@ -174,14 +174,28 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
 
   # try and identify the matching genomic sequence to the input sequence - avg.bitscore sometimes fails here
   # e.g. if there is a small exon seperated by an intron from the main sequence, it will bring the avg.bitscore down 
+  # browser()
   identi.coord = which.max((potential.homeologues$homo_length / length(input_sequence[[1]])) * (potential.homeologues$avg.percent.identical / 100)) 
   g = 1:nrow(potential.homeologues)
   g = g[-identi.coord]  
-  potential.homeologues = potential.homeologues[c(identi.coord, g), ]  
-  list(potential.homeologues, blastdf1)
+  potential.homeologues = potential.homeologues[c(identi.coord, g), ]
+  
+  coord_to_rm = which(potential.homeologues$length < 500)
+  if(length(coord_to_rm) > 0) potential.homeologues = potential.homeologues[-coord_to_rm, ]       
+  
+  existing.homeologue.files = grep('potential_homeologues', list.files(p('jobs/', gene.name, '/blast.results/')))
+  if(length(existing.homeologue.files) == 0){
+    write.csv(potential.homeologues, p('jobs/', gene.name, '/blast.results/potential_homeologues1.csv'), row.names = F)
+  } else {
+    write.csv(potential.homeologues, p('jobs/', gene.name, '/blast.results/potential_homeologues', (length(existing.homeologue.files) + 1), '.csv'), row.names = F)
+  }
 
-  # blastdf1
+
+
+  list(potential.homeologues, blastdf1)
 }
+
+
 
 extract.sequence = function(genome1, blast.df.parsed, row.coords, start.buffer, end.buffer){
   #extracts a related sequence from a genome assembly
@@ -253,8 +267,12 @@ number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables,
   #read the fasta index for this particular genome
   fasta.index1 = read.csv(p("./fasta.indexes/", genome.name, ".fa.idx"), stringsAsFactors = F, header = T) 
 
-  blastdf1.parsed_orig = parse.scaffold.blast(blastdf1, 2000)[[1]]
-  blastdf1.parsed = parse.scaffold.blast(blastdf1, 2000)[[1]]
+  print('opt$cds.max.intron.size')
+  print(opt$cds.max.intron.size)
+
+
+  blastdf1.parsed_orig = parse.scaffold.blast(blastdf1, opt$cds.max.intron.size)[[1]]
+  blastdf1.parsed = parse.scaffold.blast(blastdf1, opt$cds.max.intron.size)[[1]]
   
   original.scaf.names = multi.str.split(blastdf1.parsed$scaffold, ".$!", 1)   
   genome.assembly.subset.genomic.match = readDNAStringSet(fasta.index1[match(original.scaf.names[1], fasta.index1$desc), ])
@@ -274,7 +292,7 @@ number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables,
   blastdf0 = read.blast(p("jobs/", gene.name, "/blast.results/", blast.files[grep("w_flanking", blast.files)]))
     
   #SEQUENCE EXTRACTION WITH FULL TEMPLATE (INCLUDING FLANKING REGIONS)
-  blastdf1.parsed = parse.scaffold.blast(blastdf0, 3500)  
+  blastdf1.parsed = parse.scaffold.blast(blastdf0, opt$cds.max.intron.size)  
   coord_to_rm = which(blastdf1.parsed[[1]]$length < 500)
   if(length(coord_to_rm) > 0) blastdf1.parsed[[1]] = blastdf1.parsed[[1]][-coord_to_rm, ]  
   
@@ -297,10 +315,15 @@ number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables,
       } 
 
       if(nrow(temp.df) == 1){      
-        
+        #if only 1 HSP, just add it to the list of sequences
         if(rev.comp == F) sequences = c(sequences, DNAStringSet(genome.assembly.subset.genomic.match[[chr]][temp.df$sstart[1]:temp.df$send[1]]))
         if(rev.comp == T) sequences = c(sequences, DNAStringSet(reverseComplement(genome.assembly.subset.genomic.match[[chr]][temp.df$sstart[1]:temp.df$send[1]])))
       } else {
+        if(opt$mask.inter.hsp.distances == F){
+          #extract sequences without masking inter HSP distances with Ns if this option is false
+          if(rev.comp == F) sequences = c(sequences, DNAStringSet(genome.assembly.subset.genomic.match[[chr]][min(temp.df$sstart):max(temp.df$send)]))
+          if(rev.comp == T) sequences = c(sequences, DNAStringSet(reverseComplement(genome.assembly.subset.genomic.match[[chr]][min(temp.df$sstart):max(temp.df$send)])))
+        } else {
 
         temp.df = temp.df[sort(temp.df$sstart, index.return = T)$ix, ]
 
@@ -330,6 +353,7 @@ number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables,
 
         masked.subsequence = DNAStringSet(DNAString(do.call(paste0, lapply(subsequences.w.gaps, as.character)))) 
         sequences = c(sequences, masked.subsequence)           
+      }
       }
   }
   

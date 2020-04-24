@@ -2,7 +2,7 @@ gene.name = opt$sequence.name
 project.path = base_directory
 
 #the base path for auto primer picker
-multiple.alignment.path = p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa")
+multiple.alignment.path = p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa")
 
 
 multi.align = readDNAStringSet(multiple.alignment.path)
@@ -103,7 +103,7 @@ for(i in c("set1", "set2")){
 		#add our reverse primer to the multiple alignment via a matrix		
 		r.seq = strsplit(as.character(primer.file1.seq.rev), "")
 		r.seq = r.seq[[1]]
-		multi.align1[primer.index, primer.file1.multi.reverse.pos:(primer.file1.multi.reverse.pos + (length(primer.file1.seq.rev) - 1))] = r.seq
+		multi.align1[primer.index + 1, primer.file1.multi.reverse.pos:(primer.file1.multi.reverse.pos + (length(primer.file1.seq.rev) - 1))] = r.seq
 
 		
 		
@@ -113,7 +113,7 @@ for(i in c("set1", "set2")){
 
 		writeXStringSet(both.seqs, p(project.path, "jobs/", gene.name, "/seq/extended/primers.", i, "/", x, ".seqs.fa"))	
 		print(p("Primers written to: ", project.path, gene.name, "/seq/extended/primers.", i, "/", x, ".seqs.fa"))
-		primer.index = primer.index + 1
+		primer.index = primer.index + 2
 	}
 	
 	primer.file1.multi.forward.pos.vector = paste0("forward.", primer.file1.multi.forward.pos.vector)

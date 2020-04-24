@@ -14,14 +14,16 @@ config.variables = multi.str.split(config.file, "=", 1)
 
 #parse number of genomes in configuration file
 number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables, "_", 2)))))
-mult.align_trim = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
-mult.align1 = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
+mult.align_trim = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
+mult.align1 = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
 
 main.gene.row = 1
 template.row = 2
 
 homologue.rows = 3:(nrow(mult.align1) - (number.genomes - 1))
 variety.rows = (max(homologue.rows) + 1):nrow(mult.align1)
+
+
 
 #   ____________________________________________________________________________
 #   DEFINE FUNCTIONS                                                        ####
@@ -179,7 +181,7 @@ grab.homeologous.snps_orig = function(variety.rows, homologue.rows, multiple.ali
 }
 
 grab.homeologous.snps_new = function(input.row, template.row, homologue.rows, multiple.alignment,
- perform.masking, mask.bin.size, mask.threshold, allow.hyphens.in.mask){
+ perform.masking, mask.bin.size, mask.threshold, allow.hyphens.in.mask, allow.hyphens.for.snp.detection){
   #gets homeologous snps when there is only one genome
   #takes a DNAMultipleAlignment object and returns a numeric vector of the column coordinates containing homeologous SNPs
   #args:
@@ -188,10 +190,12 @@ grab.homeologous.snps_new = function(input.row, template.row, homologue.rows, mu
   # homologue.rows - numeric vector containing the row coordinates of the homologous sequences (either paralogous or homeologous)
   # multiple.alignment - DNAMultipleAlignment class 
   # perform.masking - Boolean, indicates whether sequences of low similarity to template should be masked
-       if(missing(perform.masking)) perform.masking = opt$perform.masking
+  #allow.hyphens.for.snp.detection - Boolean, indicates whether hyphens in homologues (not the template sequence) will be considered SNPs
+     if(missing(perform.masking)) perform.masking = opt$perform.masking
      if(missing(mask.bin.size)) mask.bin.size = opt$mask.bin.size
      if(missing(mask.threshold)) mask.threshold = opt$mask.threshold
      if(missing(allow.hyphens.in.mask)) allow.hyphens.in.mask = opt$allow.hyphens.in.mask     
+     if(missing(allow.hyphens.for.snp.detection)) allow.hyphens.for.snp.detection = opt$allow.hyphens.for.snp.detection     
   
   #NB. Insertions "-" in the template sequence cannot be allowed when classifying SNPs, as these
   #will be subsequently removed by get.coordinates.after.removing.hyphens(), meaning that the
@@ -230,14 +234,13 @@ grab.homeologous.snps_new = function(input.row, template.row, homologue.rows, mu
             #mask bins with less than 4 nucleotides in common with the template sequence        
             mask.threshold2 = (mask.bin.size / 100) * mask.threshold
             bin.df1 = bin.df1[which(bin.df1$nsim < mask.threshold2), ]
-                        
-            print("bin.df1")
-            print(bin.df1)
+
             unlist(Map(function(x, y){
                     seq(x, y, 1)
             }, bin.df1$sbin, bin.df1$ebin))            
         })
-        
+    
+    print('Performing sequence masking')
     #mask regions with low sequence identity
     for(i in 1:length(bin.dfs1)){
         msa.matrix1[(i + 2), bin.dfs1[[i]]] = "U"
@@ -247,18 +250,22 @@ grab.homeologous.snps_new = function(input.row, template.row, homologue.rows, mu
     }
 
   if(perform.masking == T) mult.align.mat1 = perform.masking.function(mult.align.mat1, mask.bin.size, mask.threshold, allow.hyphens.in.mask)
+  
+  g = lapply(mult.align.mat1, function(x){          
+    if(x[2] == "-") return(0) #return 0 if template sequence has an insertion
+    
+    if(allow.hyphens.for.snp.detection == F){
+      if("-" %in% x[3:length(x)]){
+        return(0)
+      }
+    }    
 
-  g = lapply(mult.align.mat1, function(x){
-    # if(!all((unique(x[homologue.rows]) == "-"))) {
-    if("-" %in% x[2:length(x)]){
+    if(x[template.row] %in% x[homologue.rows]){
       snp = 0
     } else {
-      if(x[template.row] %in% x[homologue.rows]){
-        snp = 0
-      } else {
-        snp = 1
-      }  
-    }    
+      snp = 1
+    }  
+      
 
     snp
     })
@@ -288,8 +295,7 @@ get.coordinates.after.removing.hyphens = function(mult.align1, sequence.row.numb
   #homologous.snps1 - Numeric vector, obtained using grab.homoelogous.snps()
   #start.base1 - Integer, obtained using get.start.and.end.base()
   #end.base1 - Integer, obtained using get.start.and.end.base()
-  mult.align2 = conv.mult.align.dnastringset(mult.align1)
-
+  mult.align2 = conv.mult.align.dnastringset(mult.align1)  
   #need to transform coordinates of bases after removing hyphens
   seq.mat = as.data.frame(as.matrix(mult.align2[[sequence.row.number]]))
 
@@ -322,8 +328,8 @@ generate_align_w_snps = function(){
       homologous.snps = grab.homeologous.snps_orig(variety.rows, homologue.rows, mult.align_trim, F, T)  
     } else {
       homologous.snps = grab.homeologous.snps_new(main.gene.row, template.row, homologue.rows, mult.align_trim)  
-    }
-
+    }        
+    
     homologous.snps.msa = homologous.snps
     homologous.snps.msa[which(homologous.snps.msa == 0)] = "-"
     homologous.snps.msa[which(homologous.snps.msa == 1)] = "S"
@@ -462,9 +468,9 @@ auto_remove_sequences_and_detect_snps = function(){
 
       #write multiple alignment without the sequence with the most hyphens
       writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
-      writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
+      writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
 
-      mult.align1 = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
+      mult.align1 = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
       
       #if there is more than one sequence with the same number of hyphens, they will both be removed. if this is the case,
       #we need to assign new homologue rows according to the number of sequences that were removed.
@@ -546,9 +552,9 @@ auto_remove_sequences_and_detect_snps = function(){
 
       #write multiple alignment without the sequence with the most hyphens
       writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
-      writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
+      writeXStringSet(mult.align1.dnastringset2, p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
 
-      mult.align1 = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa.trimmed.fa"))
+      mult.align1 = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa"))
       
       #if there is more than one sequence with the same number of hyphens, they will both be removed. if this is the case,
       #we need to assign new homologue rows according to the number of sequences that were removed.
@@ -591,7 +597,7 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
   # product.size.range - a numeric vector with two elements, the first being the minimum product size, the second the maximum
   # span.whole.gene - Boolean; should the product size span the entire gene with only one set of primers?
   # start.buffer - Integer; how many bases before the start of the gene should be allowed in the product?
-
+  
   if(missing(span.whole.gene)) span.whole.gene = F
   if(missing(start.buffer)) start.buffer = start.coord.after.filter 
 
@@ -719,9 +725,10 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
         forward.all.pen = output.forward.penalties
         forward.all.pen$p.name = forward.output.files
         forward.all.pen$pos = forward.primer.coords
-        colnames(forward.all.pen)[1] = "pen"		
-        forward.all.pen = forward.all.pen[c(10, 11, 1, 2:9)]
         forward.all.pen = forward.all.pen[sort(forward.all.pen$pos, index.return = T)$ix, ]
+        forward.all.pen$MSA.pos = which(homologous.snps == 1)
+        colnames(forward.all.pen)[1] = "pen"		
+        forward.all.pen = forward.all.pen[c(10, 11, 12, 1, 2:9)]        
         noresult.coord = which(forward.all.pen$pen == '-')
         if(length(noresult.coord) > 0) forward.all.pen = forward.all.pen[-noresult.coord, ]         
 
@@ -730,13 +737,14 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
         reverse.all.pen = output.reverse.penalties
         reverse.all.pen$p.name = reverse.output.files
         reverse.all.pen$pos = reverse.primer.coords
-        colnames(reverse.all.pen)[1] = "pen"
-        reverse.all.pen = reverse.all.pen[c(10, 11, 1, 2:9)]
         reverse.all.pen = reverse.all.pen[sort(reverse.all.pen$pos, index.return = T)$ix, ]
+        reverse.all.pen$MSA.pos = which(homologous.snps == 1)
+        colnames(reverse.all.pen)[1] = "pen"                
+        reverse.all.pen = reverse.all.pen[c(10, 11, 12, 1, 2:9)]        
         noresult.coord = which(reverse.all.pen$pen == '-')
         if(length(noresult.coord) > 0) reverse.all.pen = reverse.all.pen[-noresult.coord, ]           
 
-        dir.create(p(project.path, "jobs/", gene.name, "/primers/penalties"))
+        if(!file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties"))) dir.create(p(project.path, "jobs/", gene.name, "/primers/penalties"))
         write.csv(forward.all.pen, p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv"), row.names = F)
         write.csv(reverse.all.pen, p(project.path, "jobs/", gene.name, "/primers/penalties/reverse.all.pen.csv"), row.names = F)
 
@@ -759,8 +767,10 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
         maximum.snp.coord = start.coord.after.filter 
 
         #run loop to get pairs of primers
+
         while(best.primer.file.end.coord < end.coord.after.filter){
 
+            
             valid.fwd.coords = which(forward.all.pen$pos < (maximum.snp.coord - 1) & forward.all.pen$pos > minimum.snp.coord)
 
             while(length(valid.fwd.coords) == 0){
@@ -783,7 +793,7 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
                 valid.rev.coords = which(reverse.all.pen$pos > (f.primer.candidates$pos + product.size.range[1]) & reverse.all.pen$pos > best.primer.file.end.coord & reverse.all.pen$pos < (f.primer.candidates$pos + product.size.range[2]))
                 print("No SNPs found for reverse primer, expanding maximum product size")
 
-                #add stop conditions
+                #add stop conditions                
                 if(product.size.range[2] > length(template.sequence)) stop('No valid reverse primer coordinates')
             }
 
@@ -858,21 +868,19 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
         #insertions) to coordinates in the multiple sequence alignment
         return(list(list.best.primer.start.coords, list.best.primer.end.coords))
 
-    }
-
-
+    }  
+    
     print("Performing best primer selection")
     if(file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv")) & file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties/reverse.all.pen.csv"))){
         forward.all.pen = read.csv(p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv"), stringsAsFactors = F, header = T)
-		forward.all.pen = forward.all.pen[, 1:3]
+		forward.all.pen = forward.all.pen[, 1:4]
         reverse.all.pen = read.csv(p(project.path, "jobs/", gene.name, "/primers/penalties/reverse.all.pen.csv"), stringsAsFactors = F, header = T)
-		reverse.all.pen = reverse.all.pen[, 1:3]
+		reverse.all.pen = reverse.all.pen[, 1:4]
     } else {
         penalties1 = generate.all.primer.penalites(1)
-        forward.all.pen = penalties1[[1]][, 1:3]
-        reverse.all.pen = penalties1[[2]][, 1:3]
-    }
-
+        forward.all.pen = penalties1[[1]][, 1:4]
+        reverse.all.pen = penalties1[[2]][, 1:4]
+    }    
     used.coords1 = generate.best.primer.set(forward.all.pen, reverse.all.pen)
     generate.best.primer.set(forward.all.pen, reverse.all.pen, used.coords1[[1]], used.coords1[[2]])
 
@@ -912,6 +920,7 @@ if(exists('ONLY.PRIMER.SELECTION')){
 }
 
 if(exists('ONLY.SNP.SELECTION')){
+  print('ONLY.SNP.SELECTION')
     if(!file.exists(p(project.path, "jobs/", gene.name, "/seq/extended/SNPs"))){
         dir.create(p(project.path, "jobs/", gene.name, "/seq/extended/SNPs"))
     }
@@ -920,8 +929,10 @@ if(exists('ONLY.SNP.SELECTION')){
     colnames(all.snps1) = "snps"
     writeLines(as.character(all.snps1$snps), p(project.path, "jobs/", gene.name, "/seq/extended/SNPs/snps.txt"))
     writeLines(as.character(snp.info1$main.start.end), p(project.path, "jobs/", gene.name, "/seq/extended/SNPs/start.end.pos.txt"))
-} else {
+} 
 
+if(!(exists('ONLY.PRIMER.SELECTION') | exists('ONLY.SNP.SELECTION'))) {
+print("RUNNING STAGE 3")
 if(full.gene.product == T){
   snp.information = auto_remove_sequences_and_detect_snps()
   coords = snp.information[[1]]
