@@ -110,8 +110,26 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
     
     temp.df = temp.df[transformation.coords2, ]    
 
-    blastdf1[which(blastdf1$qseqid == unique.groups[i, 1] & blastdf1$sseqid == unique.groups[i, 2]), ] = temp.df   
     
+
+    check.group.orientation = split(temp.df, factor(temp.df$sseqid, levels = unique(temp.df$sseqid)))
+
+    check.group.orientation = lapply(check.group.orientation, function(x){      
+      #if HSPs are near to each other but in different orientations, separate them into different groups
+      same.orientation = (length(unique(x$sstart < x$send)) == 1)
+      if(same.orientation == F){
+        group1 = x[which(x$sstart < x$send), ]
+        group1$sseqid = paste0(group1$sseqid, "_1")
+        group2 = x[which(!x$sstart < x$send), ]
+        group2$sseqid = paste0(group2$sseqid, "_2")
+        x = bind_rows(group1, group2)
+      }
+      x
+    })
+
+    temp.df = bind_rows(check.group.orientation)
+    
+    blastdf1[which(blastdf1$qseqid == unique.groups[i, 1] & blastdf1$sseqid == unique.groups[i, 2]), ] = temp.df  
 
     for(i2 in 1:length(unique(temp.df$sseqid))){
       #CONCATENATE GROUPS OF HITS TOGETHER INTO potential.homeologues DATAFRAME
@@ -120,10 +138,7 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
       temp.df2$sseqid = as.character(temp.df2$sseqid)      
       
       min.start = min(temp.df2$sstart)
-      min.end = min(temp.df2$send)        
-      
-      #are all subhits of the same group in the same orientation?
-      if(length(unique(temp.df2$sstart < temp.df2$send)) != 1) browser()
+      min.end = min(temp.df2$send)            
       
       #populate potential.homeologues dataframe where average bitscore is higher than 200  
       if(mean(temp.df2$bitscore) > 200){
@@ -178,10 +193,17 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
   identi.coord = which.max((potential.homeologues$homo_length / length(input_sequence[[1]])) * (potential.homeologues$avg.percent.identical / 100)) 
   g = 1:nrow(potential.homeologues)
   g = g[-identi.coord]  
-  potential.homeologues = potential.homeologues[c(identi.coord, g), ]
+  potential.homeologues = potential.homeologues[c(identi.coord, g), ] 
   
-  coord_to_rm = which(potential.homeologues$length < 500)
-  if(length(coord_to_rm) > 0) potential.homeologues = potential.homeologues[-coord_to_rm, ]       
+  if(length(input_sequence) > 1500){
+    #this will remove all blast hits for small sequences. need an if statement
+    coord_to_rm = which(potential.homeologues$length < 500)
+    if(length(coord_to_rm) != nrow(potential.homeologues)){
+      if(length(coord_to_rm) > 0) potential.homeologues = potential.homeologues[-coord_to_rm, ]           
+    }
+    
+  }
+
   
   existing.homeologue.files = grep('potential_homeologues', list.files(p('jobs/', gene.name, '/blast.results/')))
   if(length(existing.homeologue.files) == 0){
@@ -275,7 +297,7 @@ number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables,
   blastdf1.parsed = parse.scaffold.blast(blastdf1, opt$cds.max.intron.size)[[1]]
   
   original.scaf.names = multi.str.split(blastdf1.parsed$scaffold, ".$!", 1)   
-  genome.assembly.subset.genomic.match = readDNAStringSet(fasta.index1[match(original.scaf.names[1], fasta.index1$desc), ])
+  genome.assembly.subset.genomic.match = readDNAStringSet(fasta.index1[match(original.scaf.names[1], fasta.index1$desc), ])  
   template_sequence_genomic = extract.sequence(genome.assembly.subset.genomic.match, blastdf1.parsed[1, ], 1, 1000, 1000)  
 
   opt$fasta.path = p("jobs/", gene.name, "/seq/extended/seqs/input_w_flanking.fa")
@@ -301,12 +323,16 @@ number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables,
 
   sequences = DNAStringSet()  
   
+  #SEQUENCE EXTRACTION
   for(i in 1:nrow(blastdf1.parsed[[1]])){       
     #MASKING OF INTER-HSP DISTANCES WITHIN THE SAME GROUP WITH Ns      
     rev.comp = blastdf1.parsed[[1]][i, ]$rev.comp
     rchr = blastdf1.parsed[[1]][i, ]$scaffold
       temp.df = blastdf1.parsed[[2]][which(blastdf1.parsed[[2]]$sseqid == blastdf1.parsed[[1]]$groupid[i]), ]
-      chr = blastdf1.parsed[[1]]$scaffold[i]      
+      chr = blastdf1.parsed[[1]]$scaffold[i]  
+      #remove any _ concatenations that distinguished groups in orientation check
+      chr = strsplit(chr, "_")
+      chr = chr[[1]][1]    
       if(rev.comp == T){
         #simply swap these round for rev.comp and do a reverseComplement()
         temp.df$send_rev = temp.df$sstart
@@ -333,6 +359,7 @@ number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables,
         subseq.differences = as.numeric()        
         for(x in 1:nrow(temp.df)){
           if(all(temp.df$sstart < temp.df$send)){
+            if(nrow(temp.df) == 0) browser()
             if(rev.comp == F) group.subsequences = c(group.subsequences, DNAStringSet(genome.assembly.subset.genomic.match[[chr]][temp.df$sstart[x]:temp.df$send[x]]))
             if(rev.comp == T) group.subsequences = c(group.subsequences, DNAStringSet(reverseComplement(genome.assembly.subset.genomic.match[[chr]][temp.df$sstart[x]:temp.df$send[x]])))
           }     

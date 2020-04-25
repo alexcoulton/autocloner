@@ -56,9 +56,9 @@ if(number.genomes < 1) {
 	if(exists("autocloner.debug")){
 		if(autocloner.debug == T){
 			opt = list()		
-			opt$fasta.path = "debug_seq5.fa"
+			opt$fasta.path = "debug_seq6.fa"
 			# opt$sequence.name = "debug_seq"			
-			opt$sequence.name = "largenumhomologues"		
+			opt$sequence.name = "debug_seq6"		
 			opt$product.full.gene = F
 			opt$min.product.size = 400
 			opt$max.product.size = 2000
