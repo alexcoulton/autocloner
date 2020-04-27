@@ -9,7 +9,7 @@ end.buffer = opt$end.buffer
 project.path = base_directory
 
 #read the configuration file
-config.file = readLines("./config.txt")
+config.file = readLines(opt$alternate.config)
 config.variables = multi.str.split(config.file, "=", 1)
 
 #parse number of genomes in configuration file
@@ -655,100 +655,115 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
     template.sequence = mult.align2[[template.sequence.row.number]]
       
     template.sequence2 = remove.inserts(template.sequence)
-    generate.all.primer.penalites = function(x){
-
+    generate.all.primer.penalites = function(x){        
         print("Generating primer3 files") 
-        lapply(snp.coords.after.filter, function(x){
-            generate.primer3.input.files(template.sequence2, p((x + 1), "-", (x + 100)), 100, 750, x, x, "F")
-            generate.primer3.input.files(template.sequence2, p((x + 1), "-", (x + 1)), 100, 750, x, x, "R")
-        })    
+        print("Running primer3")               
+        
+        primer3.forward.input = c(p("SEQUENCE_ID=AllForwardPrimers"), 
+                    p("SEQUENCE_TEMPLATE=", template.sequence2, ""),        
+                    "PRIMER_TASK=pick_primer_list",
+                    "PRIMER_PICK_RIGHT_PRIMER=0",
+                    p("PRIMER_NUM_RETURN=", (length(template.sequence2) * 6)),                    
+                    "=")
 
-        print("Running primer3")
+        writeLines(primer3.forward.input, p('jobs/', gene.name, '/primers/input/forwardprimers.txt'))
+
+        primer3.reverse.input = c(p("SEQUENCE_ID=AllReversePrimers"), 
+            p("SEQUENCE_TEMPLATE=", template.sequence2, ""),        
+            "PRIMER_TASK=pick_primer_list",
+            "PRIMER_PICK_LEFT_PRIMER=0",
+            p("PRIMER_NUM_RETURN=", (length(template.sequence2) * 6)),
+            "=")
+
+        writeLines(primer3.reverse.input, p('jobs/', gene.name, '/primers/input/reverseprimers.txt'))
+
+        
         system(p(project.path, "jobs/", gene.name, "/primers/run.primer3.sh ", "jobs/", gene.name))
         print("Finished")
-        forward.output.files = list.files(p(project.path, "jobs/", gene.name, "/primers/output/"), pattern = "F")
-        reverse.output.files = list.files(p(project.path, "jobs/", gene.name, "/primers/output/"), pattern = "R")
+        
+        #PARSE LEFT PRIMERS 
+        
+        primer3.forward.output = readLines(p('jobs/', gene.name, '/primers/output/forwardprimers.txt.output.txt'))
+        pos1 = primer3.forward.output[grep("PRIMER_LEFT_[0-9]*=", primer3.forward.output)]              
 
-        primer.attributes1 = c('PRIMER_LEFT_0_PENALTY', 'PRIMER_LEFT_0_SEQUENCE', 'PRIMER_LEFT_0', 'PRIMER_LEFT_0_TM',
-        'PRIMER_LEFT_0_GC_PERCENT', 'PRIMER_LEFT_0_SELF_ANY_TH', 'PRIMER_LEFT_0_SELF_END_TH',
-        'PRIMER_LEFT_0_HAIRPIN_TH', 'PRIMER_LEFT_0_END_STABILITY')
-
-        primer.attributes2 = c('PRIMER_RIGHT_0_PENALTY', 'PRIMER_RIGHT_0_SEQUENCE', 'PRIMER_RIGHT_0', 'PRIMER_RIGHT_0_TM',
-        'PRIMER_RIGHT_0_GC_PERCENT', 'PRIMER_RIGHT_0_SELF_ANY_TH', 'PRIMER_RIGHT_0_SELF_END_TH',
-        'PRIMER_RIGHT_0_HAIRPIN_TH', 'PRIMER_RIGHT_0_END_STABILITY')
-
-            output.forward.penalties = lapply(forward.output.files, function(x){
-          current.file = paste(project.path, "jobs/", gene.name, "/primers/output/", x, sep = "")
-          current.file.lines = readLines(current.file)
-          if(length(grep("PRIMER_LEFT_0_PENALTY", current.file.lines)) > 0){
-            parsep3val = function(primer.attribute){
-              pen1 = current.file.lines[grep(primer.attribute, current.file.lines)]
-              pen1 = strsplit(pen1, "=")
-              return(pen1[[1]][2])
-            }
-            primer.values1 = sapply(primer.attributes1, parsep3val)
-            primer.values1 = do.call(data.frame, as.list(primer.values1))
-            colnames(primer.values1) = primer.attributes1												
-            primer.values1
-          } else {
-            g = do.call(data.frame, as.list(rep("-", length(primer.attributes1))))
-            colnames(g) = primer.attributes1
-            return(g) #if no PRIMER_PAIR_0_PENALTY in output file, return arbitrarily large penalty
-          }
-            })
-
-            output.reverse.penalties = lapply(reverse.output.files, function(x){
-          current.file = paste(project.path, "jobs/", gene.name, "/primers/output/", x, sep = "")
-          current.file.lines = readLines(current.file)
-          if(length(grep("PRIMER_LEFT_0_PENALTY", current.file.lines)) > 0){		
-            parsep3val = function(primer.attribute){
-              pen1 = current.file.lines[grep(primer.attribute, current.file.lines)]
-              pen1 = strsplit(pen1, "=")
-              return(pen1[[1]][2])
-            }
-            primer.values1 = sapply(primer.attributes2, parsep3val)
-            primer.values1 = do.call(data.frame, as.list(primer.values1))
-            colnames(primer.values1) = primer.attributes2												
-            primer.values1							
-          } else {
-            g = do.call(data.frame, as.list(rep("-", length(primer.attributes1))))
-            colnames(g) = primer.attributes2
-            return(g) #if no PRIMER_PAIR_0_PENALTY in output file, return arbitrarily large penalty
-          }
+        pos2 = multi.str.split(pos1, "=", 2)
+        pos3.1 = multi.str.split(pos2, ",", 1)
+        pos3.2 = multi.str.split(pos2, ",", 2)
+        pos4 = as.numeric(pos3.1) + (as.numeric(pos3.2) - 1) #translate primer3 coordinate to SNP coordinate (add length to starting pos - 1)
+        
+        PRIMER_LEFT_X_PENALTY = as.numeric(multi.str.split(primer3.forward.output[grep("PRIMER_LEFT_[0-9]*_PENALTY=", primer3.forward.output)], "=", 2))
+        PRIMER_LEFT_X_SEQUENCE = multi.str.split(primer3.forward.output[grep("PRIMER_LEFT_[0-9]*_SEQUENCE=", primer3.forward.output)], "=", 2)
+        PRIMER_LEFT_X = pos2
+        PRIMER_LEFT_X_TM = multi.str.split(primer3.forward.output[grep("PRIMER_LEFT_[0-9]*_TM=", primer3.forward.output)], "=", 2)
+        PRIMER_LEFT_X_GC_PERCENT = multi.str.split(primer3.forward.output[grep('PRIMER_LEFT_[0-9]*_GC_PERCENT', primer3.forward.output)], "=", 2)
+        PRIMER_LEFT_X_SELF_ANY_TH = multi.str.split(primer3.forward.output[grep('PRIMER_LEFT_[0-9]*_SELF_ANY_TH', primer3.forward.output)], "=", 2)
+        PRIMER_LEFT_X_SELF_END_TH = multi.str.split(primer3.forward.output[grep('PRIMER_LEFT_[0-9]*_SELF_END_TH', primer3.forward.output)], "=", 2)
+        PRIMER_LEFT_X_HAIRPIN_TH = multi.str.split(primer3.forward.output[grep('PRIMER_LEFT_[0-9]*_HAIRPIN_TH', primer3.forward.output)], "=", 2)
+        PRIMER_LEFT_X_END_STABILITY = multi.str.split(primer3.forward.output[grep('PRIMER_LEFT_[0-9]*_END_STABILITY', primer3.forward.output)], "=", 2)
+        
+        
+        
+        left.parsed = data.frame("name1", pos4, PRIMER_LEFT_X_PENALTY, PRIMER_LEFT_X_SEQUENCE, PRIMER_LEFT_X, PRIMER_LEFT_X_TM, PRIMER_LEFT_X_GC_PERCENT, PRIMER_LEFT_X_SELF_ANY_TH, PRIMER_LEFT_X_SELF_END_TH, PRIMER_LEFT_X_HAIRPIN_TH, PRIMER_LEFT_X_END_STABILITY)
+        colnames(left.parsed)[1:2] = c("p.name", "pos")
+        left.parsed = left.parsed[sort(left.parsed$pos, index.return = T)$ix, ]
+        left.parsed = left.parsed[which(left.parsed$pos %in% snp.coords.after.filter), ]
+        nrow(left.parsed)
+        left.parsed2 = split(left.parsed, left.parsed$pos)
+        left.parsed2 = lapply(left.parsed2, function(x){
+          x[which.min(as.numeric(x$PRIMER_LEFT_X_PENALTY)), ]
         })
 
-        output.forward.penalties = bind_rows(output.forward.penalties)
-        output.reverse.penalties = bind_rows(output.reverse.penalties)		
+        left.parsed3 = bind_rows(left.parsed2)
 
-        #process forward primer3 output files 
-        forward.primer.coords = as.numeric(multi.str.split(multi.str.split(forward.output.files, "-", 1), "\\.", 2)) - 1
-        forward.all.pen = output.forward.penalties
-        forward.all.pen$p.name = forward.output.files
-        forward.all.pen$pos = forward.primer.coords
-        forward.all.pen = forward.all.pen[sort(forward.all.pen$pos, index.return = T)$ix, ]
-        forward.all.pen$MSA.pos = which(homologous.snps == 1)
-        colnames(forward.all.pen)[1] = "pen"		
-        forward.all.pen = forward.all.pen[c(10, 11, 12, 1, 2:9)]        
-        noresult.coord = which(forward.all.pen$pen == '-')
-        if(length(noresult.coord) > 0) forward.all.pen = forward.all.pen[-noresult.coord, ]         
+        left.parsed3$MSA.pos = which(homologous.snps == 1)[which(snp.coords.after.filter %in% left.parsed3$pos)]
+        left.parsed3 = left.parsed3[, c(1, 2, 12, 3:11)]
+        colnames(left.parsed3)[4] = "pen"
+        colnames(left.parsed3)[5:ncol(left.parsed3)] = gsub("X", "0", colnames(left.parsed3)[5:ncol(left.parsed3)])
 
-        #process reverse primer3 output files
-        reverse.primer.coords = as.numeric(multi.str.split(multi.str.split(reverse.output.files, "-", 1), "\\.", 2)) - 1
-        reverse.all.pen = output.reverse.penalties
-        reverse.all.pen$p.name = reverse.output.files
-        reverse.all.pen$pos = reverse.primer.coords
-        reverse.all.pen = reverse.all.pen[sort(reverse.all.pen$pos, index.return = T)$ix, ]
-        reverse.all.pen$MSA.pos = which(homologous.snps == 1)
-        colnames(reverse.all.pen)[1] = "pen"                
-        reverse.all.pen = reverse.all.pen[c(10, 11, 12, 1, 2:9)]        
-        noresult.coord = which(reverse.all.pen$pen == '-')
-        if(length(noresult.coord) > 0) reverse.all.pen = reverse.all.pen[-noresult.coord, ]           
+        #PARSE RIGHT PRIMERS
+        
+        primer3.reverse.output = readLines(p('jobs/', gene.name, '/primers/output/reverseprimers.txt.output.txt'))
+        pos1 = primer3.reverse.output[grep("PRIMER_RIGHT_[0-9]*=", primer3.reverse.output)]              
 
+        pos2 = multi.str.split(pos1, "=", 2)
+        pos3.1 = multi.str.split(pos2, ",", 1)
+        pos3.2 = multi.str.split(pos2, ",", 2)
+        pos4 = as.numeric(pos3.1) - (as.numeric(pos3.2) + 1) #translate primer3 coordinate to SNP coordinate (add length to starting pos - 1)
+        
+        PRIMER_RIGHT_X_PENALTY = as.numeric(multi.str.split(primer3.reverse.output[grep("PRIMER_RIGHT_[0-9]*_PENALTY=", primer3.reverse.output)], "=", 2))
+        PRIMER_RIGHT_X_SEQUENCE = multi.str.split(primer3.reverse.output[grep("PRIMER_RIGHT_[0-9]*_SEQUENCE=", primer3.reverse.output)], "=", 2)
+        PRIMER_RIGHT_X = pos2
+        PRIMER_RIGHT_X_TM = multi.str.split(primer3.reverse.output[grep("PRIMER_RIGHT_[0-9]*_TM=", primer3.reverse.output)], "=", 2)
+        PRIMER_RIGHT_X_GC_PERCENT = multi.str.split(primer3.reverse.output[grep('PRIMER_RIGHT_[0-9]*_GC_PERCENT', primer3.reverse.output)], "=", 2)
+        PRIMER_RIGHT_X_SELF_ANY_TH = multi.str.split(primer3.reverse.output[grep('PRIMER_RIGHT_[0-9]*_SELF_ANY_TH', primer3.reverse.output)], "=", 2)
+        PRIMER_RIGHT_X_SELF_END_TH = multi.str.split(primer3.reverse.output[grep('PRIMER_RIGHT_[0-9]*_SELF_END_TH', primer3.reverse.output)], "=", 2)
+        PRIMER_RIGHT_X_HAIRPIN_TH = multi.str.split(primer3.reverse.output[grep('PRIMER_RIGHT_[0-9]*_HAIRPIN_TH', primer3.reverse.output)], "=", 2)
+        PRIMER_RIGHT_X_END_STABILITY = multi.str.split(primer3.reverse.output[grep('PRIMER_RIGHT_[0-9]*_END_STABILITY', primer3.reverse.output)], "=", 2)
+        
+        
+        
+        right.parsed = data.frame("name1", pos4, PRIMER_RIGHT_X_PENALTY, PRIMER_RIGHT_X_SEQUENCE, PRIMER_RIGHT_X, PRIMER_RIGHT_X_TM, PRIMER_RIGHT_X_GC_PERCENT, PRIMER_RIGHT_X_SELF_ANY_TH, PRIMER_RIGHT_X_SELF_END_TH, PRIMER_RIGHT_X_HAIRPIN_TH, PRIMER_RIGHT_X_END_STABILITY)
+        colnames(right.parsed)[1:2] = c("p.name", "pos")
+        right.parsed = right.parsed[sort(right.parsed$pos, index.return = T)$ix, ]
+        right.parsed = right.parsed[which(right.parsed$pos %in% snp.coords.after.filter), ]
+        nrow(right.parsed)
+        right.parsed2 = split(right.parsed, right.parsed$pos)
+        right.parsed2 = lapply(right.parsed2, function(x){
+          x[which.min(as.numeric(x$PRIMER_RIGHT_X_PENALTY)), ]
+        })
+
+        right.parsed3 = bind_rows(right.parsed2)
+
+        right.parsed3$MSA.pos = which(homologous.snps == 1)[which(snp.coords.after.filter %in% right.parsed3$pos)]
+        right.parsed3 = right.parsed3[, c(1, 2, 12, 3:11)]
+        colnames(right.parsed3)[4] = "pen"
+        colnames(right.parsed3)[5:ncol(right.parsed3)] = gsub("X", "0", colnames(right.parsed3)[5:ncol(right.parsed3)])
+        #######################################
         if(!file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties"))) dir.create(p(project.path, "jobs/", gene.name, "/primers/penalties"))
-        write.csv(forward.all.pen, p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv"), row.names = F)
-        write.csv(reverse.all.pen, p(project.path, "jobs/", gene.name, "/primers/penalties/reverse.all.pen.csv"), row.names = F)
+        write.csv(left.parsed3, p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv"), row.names = F)
+        write.csv(right.parsed3, p(project.path, "jobs/", gene.name, "/primers/penalties/reverse.all.pen.csv"), row.names = F)
 
-        return(list(forward.all.pen, reverse.all.pen))
+        return(list(left.parsed3, right.parsed3))
     }
 
     generate.best.primer.set = function(forward.all.pen, reverse.all.pen, forward.coord.used, reverse.coord.used){
@@ -870,18 +885,19 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
 
     }  
     
-    print("Performing best primer selection")
-    if(file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv")) & file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties/reverse.all.pen.csv"))){
+    print("Performing best primer selection")   
+    if(1 == 2){ 
+    # if(file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv")) & file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties/reverse.all.pen.csv"))){
         forward.all.pen = read.csv(p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv"), stringsAsFactors = F, header = T)
-		forward.all.pen = forward.all.pen[, 1:4]
+		    forward.all.pen = forward.all.pen[, 1:4]
         reverse.all.pen = read.csv(p(project.path, "jobs/", gene.name, "/primers/penalties/reverse.all.pen.csv"), stringsAsFactors = F, header = T)
-		reverse.all.pen = reverse.all.pen[, 1:4]
+		    reverse.all.pen = reverse.all.pen[, 1:4]
     } else {
         penalties1 = generate.all.primer.penalites(1)
         forward.all.pen = penalties1[[1]][, 1:4]
         reverse.all.pen = penalties1[[2]][, 1:4]
     }    
-    used.coords1 = generate.best.primer.set(forward.all.pen, reverse.all.pen)
+    used.coords1 = generate.best.primer.set(forward.all.pen, reverse.all.pen)    
     generate.best.primer.set(forward.all.pen, reverse.all.pen, used.coords1[[1]], used.coords1[[2]])
 
 
