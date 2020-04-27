@@ -9,7 +9,7 @@ end.buffer = opt$end.buffer
 project.path = base_directory
 
 #read the configuration file
-config.file = readLines("./config.txt")
+config.file = readLines(opt$alternate.config)
 config.variables = multi.str.split(config.file, "=", 1)
 
 #parse number of genomes in configuration file

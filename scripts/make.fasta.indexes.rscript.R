@@ -7,13 +7,19 @@ suppressMessages(library(Biostrings))
 args = commandArgs(trailingOnly = T)
 
 #read the configuration file
-config.file = readLines("./config.txt")
+config.file = readLines(opt$alternate.config)
 config.variables = multi.str.split(config.file, "=", 1)
 
 #parse number of genomes in configuration file
 number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables, "_", 2)))))
 
-fa.index.files = list.files("./fasta.indexes/")
+config.settings = config.file[grep(1, config.variables)]
+
+config.settings.temp = config.settings[[1]]
+genome.name = strsplit(config.settings.temp[1], "=")
+genome.name = genome.name[[1]][2]
+
+fa.index.files = list.files("./fasta.indexes/", pattern = genome.name)
 if(length(fa.index.files) == 0){
 	print("No indexes found in ./fasta.indexes/; making some...")
 	lapply(1:number.genomes, function(x){

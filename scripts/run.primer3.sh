@@ -11,13 +11,14 @@ else
 
 	cd "$2""$genename"/primers/input
 	
-	#ls | parallel echo primer3_core --output={.}.bazza.txt {}
-	ls | parallel primer3_core --output=../output/{.}.output.txt {}
+	#parallel solution
+	#ls | parallel primer3_core --output=../output/{.}.output.txt {}
+	
 
-	#for i in ./*.txt;  do
-	#primer3_core < $i > ../output/$i$suffix
-	##echo $i$suffix
-	#done
+	for i in ./*.txt
+	do
+		primer3_core < $i > ../output/$i$suffix	
+	done
 
 fi
 

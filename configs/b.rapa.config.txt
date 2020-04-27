@@ -1,0 +1,6 @@
+#configuration file detailing
+#paths to genome assembly files,
+#including .fa file, blastdb and name of genome
+GENOME_1_NAME=brassica.rapa
+GENOME_1_FA_PATH=/home/ac14037/project.phd.main/genome_assemblies/polyploids/brassica.rapa/BrapaV2.5_Chr.fa
+GENOME_1_BLASTDB_PATH=/home/ac14037/project.phd.main/genome_assemblies/polyploids/brassica.rapa/blastdb/brassica.rapa

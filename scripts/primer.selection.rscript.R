@@ -689,7 +689,7 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
         pos2 = multi.str.split(pos1, "=", 2)
         pos3.1 = multi.str.split(pos2, ",", 1)
         pos3.2 = multi.str.split(pos2, ",", 2)
-        pos4 = as.numeric(pos3.1) + (as.numeric(pos3.2) - 1) #translate primer3 coordinate to SNP coordinate (add length to starting pos - 1)
+        pos4 = as.numeric(pos3.1) + (as.numeric(pos3.2)) - 1 #translate primer3 coordinate to SNP coordinate (add length to starting pos - 1)
         
         PRIMER_LEFT_X_PENALTY = as.numeric(multi.str.split(primer3.forward.output[grep("PRIMER_LEFT_[0-9]*_PENALTY=", primer3.forward.output)], "=", 2))
         PRIMER_LEFT_X_SEQUENCE = multi.str.split(primer3.forward.output[grep("PRIMER_LEFT_[0-9]*_SEQUENCE=", primer3.forward.output)], "=", 2)
@@ -728,7 +728,7 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
         pos2 = multi.str.split(pos1, "=", 2)
         pos3.1 = multi.str.split(pos2, ",", 1)
         pos3.2 = multi.str.split(pos2, ",", 2)
-        pos4 = as.numeric(pos3.1) - (as.numeric(pos3.2) + 1) #translate primer3 coordinate to SNP coordinate (add length to starting pos - 1)
+        pos4 = (as.numeric(pos3.1) - as.numeric(pos3.2)) + 1 #translate primer3 coordinate to SNP coordinate
         
         PRIMER_RIGHT_X_PENALTY = as.numeric(multi.str.split(primer3.reverse.output[grep("PRIMER_RIGHT_[0-9]*_PENALTY=", primer3.reverse.output)], "=", 2))
         PRIMER_RIGHT_X_SEQUENCE = multi.str.split(primer3.reverse.output[grep("PRIMER_RIGHT_[0-9]*_SEQUENCE=", primer3.reverse.output)], "=", 2)
@@ -758,6 +758,7 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
         right.parsed3 = right.parsed3[, c(1, 2, 12, 3:11)]
         colnames(right.parsed3)[4] = "pen"
         colnames(right.parsed3)[5:ncol(right.parsed3)] = gsub("X", "0", colnames(right.parsed3)[5:ncol(right.parsed3)])
+        
         #######################################
         if(!file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties"))) dir.create(p(project.path, "jobs/", gene.name, "/primers/penalties"))
         write.csv(left.parsed3, p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv"), row.names = F)
@@ -766,9 +767,10 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
         return(list(left.parsed3, right.parsed3))
     }
 
-    generate.best.primer.set = function(forward.all.pen, reverse.all.pen, forward.coord.used, reverse.coord.used){
+    generate.best.primer.set = function(forward.all.pen, reverse.all.pen, forward.coord.used, reverse.coord.used, iteration){
         if(missing(forward.coord.used)) forward.coord.used = as.numeric()
         if(missing(reverse.coord.used)) reverse.coord.used = as.numeric()
+        if(missing(iteration)) iteration = 1
         
         if(length(forward.coord.used) > 0) forward.all.pen = forward.all.pen[-which(forward.all.pen$pos %in% forward.coord.used), ]
         if(length(reverse.coord.used) > 0) reverse.all.pen = reverse.all.pen[-which(reverse.all.pen$pos %in% reverse.coord.used), ]
@@ -794,7 +796,14 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
                 print("No SNPs found for forward primer, expanding start buffer")
 
                 #add stop condition
-                if(maximum.snp.coord > max(coords$snp.coords)) stop('No valid forward primer coordinates')
+                if(maximum.snp.coord > max(coords$snp.coords)){
+                  if(iteration == 1){
+                    write('No valid forward primer coordinates', p('jobs/', gene.name, '/error.txt'))
+                    stop('No valid forward primer coordinates')
+                  } else {
+                    return(NA)
+                  }
+                } 
             }
 
             f.primer.candidates = forward.all.pen[which(forward.all.pen$pos < (maximum.snp.coord - 1) & forward.all.pen$pos > minimum.snp.coord), ] 
@@ -809,7 +818,14 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
                 print("No SNPs found for reverse primer, expanding maximum product size")
 
                 #add stop conditions                
-                if(product.size.range[2] > length(template.sequence)) stop('No valid reverse primer coordinates')
+                if(product.size.range[2] > length(template.sequence)){                  
+                  if(iteration == 1){
+                    write('No valid reverse primer coordinates', p('jobs/', gene.name, '/error.txt'))
+                    stop('No valid reverse primer coordinates')
+                  } else {                    
+                    return(NA)
+                  }
+                } 
             }
 
 
@@ -886,8 +902,8 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
     }  
     
     print("Performing best primer selection")   
-    if(1 == 2){ 
-    # if(file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv")) & file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties/reverse.all.pen.csv"))){
+    # if(1 == 2){ #toggle to skip caching 
+    if(file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv")) & file.exists(p(project.path, "jobs/", gene.name, "/primers/penalties/reverse.all.pen.csv"))){
         forward.all.pen = read.csv(p(project.path, "jobs/", gene.name, "/primers/penalties/forward.all.pen.csv"), stringsAsFactors = F, header = T)
 		    forward.all.pen = forward.all.pen[, 1:4]
         reverse.all.pen = read.csv(p(project.path, "jobs/", gene.name, "/primers/penalties/reverse.all.pen.csv"), stringsAsFactors = F, header = T)
@@ -898,7 +914,7 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
         reverse.all.pen = penalties1[[2]][, 1:4]
     }    
     used.coords1 = generate.best.primer.set(forward.all.pen, reverse.all.pen)    
-    generate.best.primer.set(forward.all.pen, reverse.all.pen, used.coords1[[1]], used.coords1[[2]])
+    generate.best.primer.set(forward.all.pen, reverse.all.pen, used.coords1[[1]], used.coords1[[2]], 2)
 
 
 

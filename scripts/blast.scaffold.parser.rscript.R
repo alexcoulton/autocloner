@@ -15,6 +15,7 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
   #args:
   # blastdf1 - a BLAST dataframe imported using read.blast()
   # dist.threshold - Integer; the maximum number of bases between two hits for them to be considered part of the same group
+  
   blastdf1 = sort.blastdf(blastdf1) 
   
   unique.groups = convert.to.character.data.frame(unique(blastdf1[, 1:2]))
@@ -24,7 +25,7 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
   
   count1 = make.counter()
   
-  for(i in 1:nrow(unique.groups)){
+  for(i in 1:nrow(unique.groups)){    
     temp.df = filter(blastdf1, qseqid == unique.groups[i, 1], sseqid == unique.groups[i, 2])
     
     
@@ -181,7 +182,7 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
   }
 
 
-
+  
   potential.homeologues$length = as.numeric(potential.homeologues$end) - as.numeric(potential.homeologues$start)
   potential.homeologues$groupid = potential.homeologues$scaffold
   potential.homeologues$scaffold = multi.str.split(potential.homeologues$scaffold, "\\.\\!\\!\\$", 1)    
@@ -213,7 +214,7 @@ parse.scaffold.blast = function(blastdf1, dist.threshold){
   }
 
 
-
+  
   list(potential.homeologues, blastdf1)
 }
 
@@ -256,7 +257,7 @@ extract.sequence = function(genome1, blast.df.parsed, row.coords, start.buffer, 
 #   BEGIN PROCESSING                                                        ####
 
 #read the configuration file
-config.file = readLines("./config.txt")
+config.file = readLines(opt$alternate.config)
 
 
 config.variables = multi.str.split(config.file, "=", 1)
@@ -297,6 +298,9 @@ number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables,
   blastdf1.parsed = parse.scaffold.blast(blastdf1, opt$cds.max.intron.size)[[1]]
   
   original.scaf.names = multi.str.split(blastdf1.parsed$scaffold, ".$!", 1)   
+  
+  fasta.index1$offset = as.numeric(fasta.index1$offset)
+
   genome.assembly.subset.genomic.match = readDNAStringSet(fasta.index1[match(original.scaf.names[1], fasta.index1$desc), ])  
   template_sequence_genomic = extract.sequence(genome.assembly.subset.genomic.match, blastdf1.parsed[1, ], 1, 1000, 1000)  
 
@@ -315,8 +319,9 @@ number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables,
     
   #SEQUENCE EXTRACTION WITH FULL TEMPLATE (INCLUDING FLANKING REGIONS)
   blastdf1.parsed = parse.scaffold.blast(blastdf0, opt$cds.max.intron.size)  
-  coord_to_rm = which(blastdf1.parsed[[1]]$length < 500)
-  if(length(coord_to_rm) > 0) blastdf1.parsed[[1]] = blastdf1.parsed[[1]][-coord_to_rm, ]  
+  
+  # coord_to_rm = which(blastdf1.parsed[[1]]$length < 500)
+  # if(length(coord_to_rm) > 0) blastdf1.parsed[[1]] = blastdf1.parsed[[1]][-coord_to_rm, ]  
   
   
   genome.assembly.subset.genomic.match = readDNAStringSet(fasta.index1[match(unique(blastdf1.parsed[[1]]$scaffold), fasta.index1$desc), ])
@@ -325,6 +330,7 @@ number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables,
   
   #SEQUENCE EXTRACTION
   for(i in 1:nrow(blastdf1.parsed[[1]])){       
+    
     #MASKING OF INTER-HSP DISTANCES WITHIN THE SAME GROUP WITH Ns      
     rev.comp = blastdf1.parsed[[1]][i, ]$rev.comp
     rchr = blastdf1.parsed[[1]][i, ]$scaffold
@@ -383,12 +389,20 @@ number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables,
       }
       }
   }
+
+  
+
+  if(nrow(blastdf1.parsed[[1]]) <= 1){
+    write('No homologues found', p("jobs/", gene.name, "/error.txt"))
+    stop('No homologues found')    
+  }
   
   names(sequences) = paste0(blastdf1.parsed[[1]]$scaffold, "_", blastdf1.parsed[[1]]$query.start)  
   
   #SETUP ANCHOR POINTS FOR DIALIGN
   coord.query.start = c(1, sort(blastdf1.parsed[[1]]$query.start[2:nrow(blastdf1.parsed[[1]])], index.return = T)$ix + 1)
   blastdf1.parsed[[1]] = blastdf1.parsed[[1]][coord.query.start, ]
+  
   sequences = sequences[coord.query.start]
   
   sequences = c(DNAStringSet(input_sequence), sequences)

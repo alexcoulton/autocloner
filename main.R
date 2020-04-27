@@ -19,16 +19,7 @@ setwd(base_directory)
 
 args = commandArgs(trailingOnly = T)
 
-config.file = readLines("./config.txt")
-config.variables = multi.str.split(config.file, "=", 1)
-
-#parse number of genomes in configuration file
-number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables, "_", 2)))))
-
-if(number.genomes < 1) {
-	print("./config.txt is empty")
-} else {
-	option_list = list(
+option_list = list(
 		make_option(c("--sequence.name", "-n"), type = "character"),
 		make_option(c("--fasta.path", "-f"), type = "character"),		
 		make_option(c("--product.full.gene", "-P"), action = "store_true", default = F),
@@ -47,18 +38,30 @@ if(number.genomes < 1) {
 		make_option(c("--allow.hyphens.for.snp.detection"), action = "store_true", default = T),
 		make_option(c("--mask.inter.hsp.distances"), action = "store_true", default = F),
 		make_option(c("--alignment.method"), type = "character", default = "muscle"),
-		make_option(c("--cds.max.intron.size"), type = "integer", default = 3500)
+		make_option(c("--cds.max.intron.size"), type = "integer", default = 3500),
+		make_option(c("--alternate.config"), type = "character", default = './config.txt')
 		)
 
-	opt = parse_args(OptionParser(option_list = option_list))	
+opt = parse_args(OptionParser(option_list = option_list))	
+
+config.file = readLines(opt$alternate.config)
+config.variables = multi.str.split(config.file, "=", 1)
+
+#parse number of genomes in configuration file
+number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables, "_", 2)))))
+
+if(number.genomes < 1) {
+	print("./config.txt is empty")
+} else {
+	
 	#### DEBUG OPTIONS ####
 
 	if(exists("autocloner.debug")){
 		if(autocloner.debug == T){
 			opt = list()		
-			opt$fasta.path = "debug_seq6.fa"
+			opt$fasta.path = "debug_seq.fa"
 			# opt$sequence.name = "debug_seq"			
-			opt$sequence.name = "debug_seq6"		
+			opt$sequence.name = "test7"		
 			opt$product.full.gene = F
 			opt$min.product.size = 400
 			opt$max.product.size = 2000
@@ -66,10 +69,10 @@ if(number.genomes < 1) {
 			opt$end.buffer = 2000
 			
 			#ALL RUN MODES
-			# opt$run.mode = "run.full.pipeline"
+			opt$run.mode = "run.full.pipeline"
 			# opt$run.mode = "run.pipeline.own.alignment"
 			# opt$run.mode = "run.only.primer.selection"
-			opt$run.mode = "run.only.msa"
+			# opt$run.mode = "run.only.msa"
 			# opt$run.mode = "run.only.snp.selection"
 			# opt$run.mode = "run.adv.primer.select.job"					
 
@@ -81,9 +84,11 @@ if(number.genomes < 1) {
 			opt$number.homologues = 4			
 			opt$all.homologues = T
 			opt$allow.hyphens.for.snp.detection = T
-			opt$alignment.method = "dialign"
+			opt$alignment.method = "muscle"
 			opt$mask.inter.hsp.distances = T
-			opt$cds.max.intron.size = 3500			
+			opt$cds.max.intron.size = 3500		
+			# opt$alternate.config = './configs/b.rapa.config.txt'	
+			opt$alternate.config = './config.txt'	
 		}
 	} 
 	

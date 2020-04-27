@@ -1,0 +1,6 @@
+#configuration file detailing
+#paths to genome assembly files,
+#including .fa file, blastdb and name of genome
+GENOME_1_NAME=durum.svevo
+GENOME_1_FA_PATH=/home/ac14037/project.phd.main/genome_assemblies/polyploids/durum.svevo/GCA_900231445.1_Svevo.v1_genomic.fna
+GENOME_1_BLASTDB_PATH=/home/ac14037/project.phd.main/genome_assemblies/polyploids/durum.svevo/blastdb/durum.svevo
