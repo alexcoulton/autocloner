@@ -59,9 +59,9 @@ if(number.genomes < 1) {
 	if(exists("autocloner.debug")){
 		if(autocloner.debug == T){
 			opt = list()		
-			opt$fasta.path = "debug_seq.fa"
+			opt$fasta.path = "debug_seq_edited.fa"
 			# opt$sequence.name = "debug_seq"			
-			opt$sequence.name = "test7"		
+			opt$sequence.name = "edited.debug.test"		
 			opt$product.full.gene = F
 			opt$min.product.size = 400
 			opt$max.product.size = 2000
@@ -109,6 +109,12 @@ if(number.genomes < 1) {
 			system(p("./scripts/create.folder.structure.sh ", opt$sequence.name, " ", base_directory))
 			system(p("cp ./scripts/clean.folders.sh ./", "jobs/", opt$sequence.name, "/primers/"))
 			system(p("cp ./scripts/run.primer3.sh ./", "jobs/", opt$sequence.name, "/primers/"))
+			system(p("echo 'main.R' > ./", "jobs/", opt$sequence.name, "/pipeline.checkpoint.txt"))
+			system(p("echo 'Initial error - delete when finished' > ./", "jobs/", opt$sequence.name, "/primers/error.txt"))
+	}
+
+	rm.error.txt = function(){
+		file.remove('./jobs/', opt$sequence.name, '/primers/error.txt')
 	}
 
 	run.pipeline.own.alignment = function(){
@@ -135,6 +141,8 @@ if(number.genomes < 1) {
 				print.pipeline.stage(i)
 				source(paste0("./scripts/", i))
 			}		
+
+			rm.error.txt()
 	}
 
 	run.full.pipeline = function(){
@@ -159,6 +167,7 @@ if(number.genomes < 1) {
 				print.pipeline.stage(i)
 				source(paste0("./scripts/", i))
 			}
+			rm.error.txt()
 	}
 
 	run.single.pipeline.stage = function(script.name){
@@ -174,6 +183,7 @@ if(number.genomes < 1) {
 				print.pipeline.stage(i)
 				source(paste0("./scripts/", i))
 			}
+			rm.error.txt()
 	}
 
 	run.only.primer.selection = function(){
@@ -184,6 +194,7 @@ if(number.genomes < 1) {
 			print.pipeline.stage(i)
 			source(paste0("./scripts/", i))
 		}
+		rm.error.txt()
 	}
 
 	run.only.snp.selection = function(){
@@ -193,6 +204,7 @@ if(number.genomes < 1) {
 			print.pipeline.stage(i)
 			source(paste0("./scripts/", i))
 		}
+		rm.error.txt()
 	}
 
 	run.only.msa = function(){
@@ -211,6 +223,7 @@ if(number.genomes < 1) {
 				print.pipeline.stage(i)
 				source(paste0("./scripts/", i))
 			}
+			rm.error.txt()
 	}
 
 

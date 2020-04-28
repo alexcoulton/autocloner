@@ -1,3 +1,4 @@
+write('primer.selection.rscript.R', p("jobs/", opt$sequence.name, "/pipeline.checkpoint.txt"))
 gene.name = opt$sequence.name
 full.gene.product = opt$product.full.gene
 min.product.size = opt$min.product.size

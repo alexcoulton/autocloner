@@ -1,3 +1,5 @@
+write('perform.muscle.R', p("jobs/", opt$sequence.name, "/pipeline.checkpoint.txt"))
+
 if(opt$run.mode == "own.align"){ #if using own alignment
 	system(p("muscle -in ", "jobs/", opt$sequence.name, "/seq/extended/alignments/all.align.rev.nohyphen.fa -out ", "jobs/", opt$sequence.name, "/seq/extended/alignments/all.align.rev.fa"))
 } else {

@@ -1,4 +1,4 @@
-
+write('rearrange.muscle.rscript.R', p("jobs/", opt$sequence.name, "/pipeline.checkpoint.txt"))
 #perform BLAST search of sequence against genomes for primer picking
 #provide path of file to be BLASTed against genomes as an argument
 

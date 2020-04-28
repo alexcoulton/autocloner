@@ -5,6 +5,8 @@ suppressMessages(library(dplyr))
 suppressMessages(library(Biostrings))
 
 args = commandArgs(trailingOnly = T)
+gene.name = opt$sequence.name
+write('make.fasta.indexes.rscript.R', p("jobs/", opt$sequence.name, "/pipeline.checkpoint.txt"))
 
 #read the configuration file
 config.file = readLines(opt$alternate.config)

@@ -1,3 +1,4 @@
+write('primer.evaluation.rscript.R', p("jobs/", opt$sequence.name, "/pipeline.checkpoint.txt"))
 gene.name = opt$sequence.name
 project.path = base_directory
 

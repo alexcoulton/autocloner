@@ -1,5 +1,5 @@
 #BLAST PARSER FOR SCAFFOLDS
-
+write('blast.scaffold.parser.rscript.R', p("jobs/", opt$sequence.name, "/pipeline.checkpoint.txt"))
 gene.name = opt$sequence.name
 fa.path1 = opt$fasta.path
 input_sequence = readDNAStringSet(p("jobs/", gene.name, "/seq/extended/seqs/input_seq.fa"))
@@ -292,7 +292,6 @@ number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables,
 
   print('opt$cds.max.intron.size')
   print(opt$cds.max.intron.size)
-
 
   blastdf1.parsed_orig = parse.scaffold.blast(blastdf1, opt$cds.max.intron.size)[[1]]
   blastdf1.parsed = parse.scaffold.blast(blastdf1, opt$cds.max.intron.size)[[1]]
