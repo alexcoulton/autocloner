@@ -39,12 +39,32 @@ option_list = list(
 		make_option(c("--mask.inter.hsp.distances"), action = "store_true", default = F),
 		make_option(c("--alignment.method"), type = "character", default = "muscle"),
 		make_option(c("--cds.max.intron.size"), type = "integer", default = 3500),
-		make_option(c("--alternate.config"), type = "character", default = './config.txt')
+		make_option(c("--alternate.config"), type = "character", default = './config.txt'),
+		make_option(c("--wheat.genomes.to.include"), type = "character", default = 'IWGSC') #enter genome names separated by underscores. e.g. iwgsc_paragon_claire_robigus_cadenza IWGSC_PARAGON_CLAIRE_ROBIGUS_CADENZA
 		)
 
 opt = parse_args(OptionParser(option_list = option_list))	
 
 config.file = readLines(opt$alternate.config)
+
+rearrange.config = function(config.file, wheat.genomes.to.include){
+	genome.inc = strsplit(wheat.genomes.to.include, "_")
+	genome.inc = genome.inc[[1]]
+
+	config.file = config.file[unlist(lapply(genome.inc, function(x){
+		coord1 = grep(x, config.file)
+		coord1:(coord1 + 2)
+	}))]
+
+	config.file2 = strsplit(config.file, "_")
+	config.genome.num = unlist(lapply(1:(length(config.file2) / 3), function(x) rep(x, 3)))
+
+	Map(function(x, y){
+		x[2] = y
+		paste(x, collapse = "_")
+	}, config.file2, config.genome.num)
+}
+
 config.variables = multi.str.split(config.file, "=", 1)
 
 #parse number of genomes in configuration file
@@ -59,9 +79,9 @@ if(number.genomes < 1) {
 	if(exists("autocloner.debug")){
 		if(autocloner.debug == T){
 			opt = list()		
-			opt$fasta.path = "debug_seq_edited.fa"
+			opt$fasta.path = "debug_seq.fa"
 			# opt$sequence.name = "debug_seq"			
-			opt$sequence.name = "edited.debug.test"		
+			opt$sequence.name = "paragon.test"		
 			opt$product.full.gene = F
 			opt$min.product.size = 400
 			opt$max.product.size = 2000
@@ -84,14 +104,18 @@ if(number.genomes < 1) {
 			opt$number.homologues = 4			
 			opt$all.homologues = T
 			opt$allow.hyphens.for.snp.detection = T
-			opt$alignment.method = "muscle"
+			opt$alignment.method = "dialign"
 			opt$mask.inter.hsp.distances = T
 			opt$cds.max.intron.size = 3500		
 			# opt$alternate.config = './configs/b.rapa.config.txt'	
 			opt$alternate.config = './config.txt'	
+			opt$wheat.genomes.to.include = 'IWGSC_PARAGON'
 		}
 	} 
 	
+
+	config.file = rearrange.config(config.file, opt$wheat.genomes.to.include)
+
 	muscle.debug = F
 	blast.debug = F
 	
@@ -114,7 +138,7 @@ if(number.genomes < 1) {
 	}
 
 	rm.error.txt = function(){
-		file.remove('./jobs/', opt$sequence.name, '/primers/error.txt')
+		file.remove(paste0('./jobs/', opt$sequence.name, '/primers/error.txt'))
 	}
 
 	run.pipeline.own.alignment = function(){
@@ -243,6 +267,9 @@ if(number.genomes < 1) {
 		if(opt$run.mode == "run.only.msa") run.only.msa()	
 		if(opt$run.mode == "run.only.snp.selection") run.only.snp.selection()	
 		if(opt$run.mode == "run.adv.primer.select.job") run.adv.primer.select.job()	
+		
+		# run.single.pipeline.stage('blast.scaffold.parser.rscript.R')
+		
 
 	}
 }

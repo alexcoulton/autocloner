@@ -10,7 +10,6 @@ end.buffer = opt$end.buffer
 project.path = base_directory
 
 #read the configuration file
-config.file = readLines(opt$alternate.config)
 config.variables = multi.str.split(config.file, "=", 1)
 
 #parse number of genomes in configuration file
@@ -21,8 +20,9 @@ mult.align1 = readDNAMultipleAlignment(p(project.path, "jobs/", gene.name, "/seq
 main.gene.row = 1
 template.row = 2
 
-homologue.rows = 3:(nrow(mult.align1) - (number.genomes - 1))
-variety.rows = (max(homologue.rows) + 1):nrow(mult.align1)
+homologue.rows = (2 + number.genomes):nrow(mult.align1)
+variety.rows = 3:(2 + number.genomes - 1)
+# variety.rows = (max(homologue.rows) + 1):nrow(mult.align1) # varietie genes will always be placed immediately after row 2 (input sequence w flanking regions)
 
 
 
@@ -127,60 +127,6 @@ grab.primer.seq = function(primer.id, left.or.right, primer3.output){
 
 count1 = make.counter()
 
-grab.homeologous.snps_orig = function(variety.rows, homologue.rows, multiple.alignment, allow.insertion, allow.N){
-  #gets homeologous snps when there are varietal genomes included
-  #takes a DNAMultipleAlignment object and returns a numeric vector of the column coordinates containing homeologous SNPs
-  #args:
-  # variety.rows - numeric vector containing the row coordinates of the varietal sequences from the same locus
-  # homologue.rows - numeric vector containing the row coordinates of the homologous sequences (either paralogous or homeologous)
-  # multiple.alignment - DNAMultipleAlignment class 
-  # allow.insertion - boolean, indicates whether or not insertions "-" into the homologous sequences are valid SNPs
-  
-  mult.align.mat1 = convert.to.character.data.frame(as.data.frame(as.matrix(multiple.alignment)))
-  g = lapply(mult.align.mat1, function(x){
-    if(length(unique(x[variety.rows])) == 1){ #are all of the varieties the same base at this locus?
-      snp.check = unique(x[homologue.rows]) %in% unique(x[variety.rows]) #are any of the bases in any of the homologous sequences the same as the 
-      #varietal sequences?
-      if(T %in% snp.check){
-        snp = 0
-      } else {
-        if(allow.insertion == T & allow.N == T){
-          snp = 1  
-        } else {
-          if(allow.insertion == F & allow.N == T){
-            if("-" %in% x[homologue.rows] | "-" %in% x[variety.rows]){
-              snp = 0
-            } else {
-              snp = 1
-            }
-          }
-
-          if(allow.insertion == T & allow.N == F){
-            if("N" %in% x[homologue.rows]){
-              snp = 0
-            } else {
-              snp = 1
-            }
-          }
-
-          if(allow.insertion == F & allow.N == F){
-            if("-" %in% x[homologue.rows] | "-" %in% x[variety.rows] | "N" %in% x[homologue.rows]){
-              snp = 0
-            } else {
-              snp = 1
-            }
-          }
-        } 
-      }
-    } else {
-      snp = 0
-    }
-    snp  
-  })
-  
-  unlist(g)    
-}
-
 grab.homeologous.snps_new = function(input.row, template.row, homologue.rows, multiple.alignment,
  perform.masking, mask.bin.size, mask.threshold, allow.hyphens.in.mask, allow.hyphens.for.snp.detection){
   #gets homeologous snps when there is only one genome
@@ -207,7 +153,7 @@ grab.homeologous.snps_new = function(input.row, template.row, homologue.rows, mu
   perform.masking.function = function(msa.matrix1, mask.bin.size, mask.threshold, allow.hyphens.in.mask){
       # mask.threshold - integer, underneath what percentage of similarity should masking be performed?
       #            e.g. 40 - when bins have less than 40% nucleotides in common, mask them
-          if(missing(mask.bin.size)) mask.bin.size = 10
+        if(missing(mask.bin.size)) mask.bin.size = 10
         if(missing(mask.threshold)) mask.threshold = 40
         if(missing(allow.hyphens.in.mask)) allow.hyphens.in.mask = F
           
@@ -216,7 +162,7 @@ grab.homeologous.snps_new = function(input.row, template.row, homologue.rows, mu
         end.sequence.bins = c((start.sequence.bins[2:length(start.sequence.bins)] - 1), ncol(msa.matrix1))
 
         #performing masking of regions with low sequence identity (in bins of 10)
-        bin.dfs1 = lapply(3:nrow(msa.matrix1), function(z){ #lapply across rows
+        bin.dfs1 = lapply((2 + number.genomes):nrow(msa.matrix1), function(z){ #lapply across rows
             bin.similarities = unlist(Map(function(x, y){
                 template.bin.seq = msa.matrix1[2, x:y]
                 target.bin.seq = msa.matrix1[z, x:y]
@@ -252,24 +198,36 @@ grab.homeologous.snps_new = function(input.row, template.row, homologue.rows, mu
 
   if(perform.masking == T) mult.align.mat1 = perform.masking.function(mult.align.mat1, mask.bin.size, mask.threshold, allow.hyphens.in.mask)
   
-  g = lapply(mult.align.mat1, function(x){          
-    if(x[2] == "-") return(0) #return 0 if template sequence has an insertion
-    
-    if(allow.hyphens.for.snp.detection == F){
-      if("-" %in% x[3:length(x)]){
-        return(0)
-      }
-    }    
-
-    if(x[template.row] %in% x[homologue.rows]){
-      snp = 0
-    } else {
-      snp = 1
-    }  
+  counter1 = 1
+  g = lapply(mult.align.mat1, function(x){     
+      if(x[2] == "-") return(0) #return 0 if template sequence has an insertion
       
-
-    snp
-    })
+      if(allow.hyphens.for.snp.detection == F){
+        if("-" %in% x[3:length(x)]){
+          return(0)
+        }
+      }    
+      
+      if(number.genomes == 1){
+          if(x[template.row] %in% x[homologue.rows]){
+            snp = 0
+          } else {
+            snp = 1
+          }  
+      } else {
+          if(length(unique(x[template.row:(template.row + number.genomes - 1)])) == 1){ #if all varieties have the same base          
+              if(x[template.row] %in% x[homologue.rows]){
+                  snp = 0
+              } else {                
+                  snp = 1
+              }
+          } else {
+              snp = 0 #no SNP if varietal genomes have different bases
+          }
+      }     
+      counter1 <<- counter1 + 1
+      snp
+  })
 
   unlist(g)    
 }
@@ -323,13 +281,9 @@ get.coordinates.after.removing.hyphens = function(mult.align1, sequence.row.numb
   g
 }
 
-generate_align_w_snps = function(){
-    library(ggplot2)
-    if(number.genomes > 1){
-      homologous.snps = grab.homeologous.snps_orig(variety.rows, homologue.rows, mult.align_trim, F, T)  
-    } else {
-      homologous.snps = grab.homeologous.snps_new(main.gene.row, template.row, homologue.rows, mult.align_trim)  
-    }        
+generate_align_w_snps = function(){    
+    library(ggplot2)    
+    homologous.snps = grab.homeologous.snps_new(main.gene.row, template.row, homologue.rows, mult.align_trim)  
     
     homologous.snps.msa = homologous.snps
     homologous.snps.msa[which(homologous.snps.msa == 0)] = "-"
@@ -967,11 +921,11 @@ if(exists('ONLY.SNP.SELECTION')){
 if(!(exists('ONLY.PRIMER.SELECTION') | exists('ONLY.SNP.SELECTION'))) {
 print("RUNNING STAGE 3")
 if(full.gene.product == T){
-  snp.information = auto_remove_sequences_and_detect_snps()
+  snp.information = generate_align_w_snps()
   coords = snp.information[[1]]
   find.best.primers(mult.align1, template.row, coords[[1]], coords[[2]], coords[[3]], c(1, 100000), T, coords = snp.information$coords, homologous.snps = snp.information$homologous.snps)
-} else {
-  snp.information = auto_remove_sequences_and_detect_snps()
+} else {  
+  snp.information = generate_align_w_snps()
   coords = snp.information[[1]]  
   find.best.primers(mult.align1, template.row, coords[[1]], coords[[2]], coords[[3]], c(min.product.size, max.product.size), F, coords = snp.information$coords, homologous.snps = snp.information$homologous.snps)  
 }

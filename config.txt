@@ -4,3 +4,9 @@
 GENOME_1_NAME=IWGSC
 GENOME_1_FA_PATH=/home/ac14037/project.phd.main/genome_assemblies/iwgsc/iwgsc.4b.rev.fa
 GENOME_1_BLASTDB_PATH=/home/ac14037/project.phd.main/bioinf/blast/probe.vs.genome.blast/blastdb/iwgsc.4b.rev.db
+GENOME_2_NAME=PARAGON
+GENOME_2_FA_PATH=/home/ac14037/project.phd.main/genome_assemblies/tgac/Triticum_aestivum_Paragon_EIv1.1.fa
+GENOME_2_BLASTDB_PATH=/home/ac14037/project.phd.main/bioinf/blast/genes.vs.paragon.genome/blastdb/earlham.paragon.db
+GENOME_3_NAME=CLAIRE
+GENOME_3_FA_PATH=/home/ac14037/project.phd.main/genome_assemblies/tgac/Triticum_aestivum_Claire_EIv1.1.fa
+GENOME_3_BLASTDB_PATH=/home/ac14037/project.phd.main/bioinf/blast/claire.genome/blastdb/claire

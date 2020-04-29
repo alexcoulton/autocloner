@@ -1,4 +1,4 @@
-
+write('perform.blast.rscript.R', p("jobs/", opt$sequence.name, "/pipeline.checkpoint.txt"))
 #provide path of file to be BLASTed against genomes as an argument
 
 #perform BLAST search of sequence against genomes for primer picking
@@ -14,14 +14,12 @@ query.fa.name = strsplit(query.fa.path, "/")
 query.fa.name = query.fa.name[[1]]
 query.fa.name = query.fa.name[length(query.fa.name)]
 
-#read the configuration file
-config.file = readLines(opt$alternate.config)
 config.variables = multi.str.split(config.file, "=", 1)
 
 #parse number of genomes in configuration file
 number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables, "_", 2)))))
 
-
+if(query.fa.path != p("jobs/", gene.name, "/seq/extended/seqs/input_w_flanking.fa")) number.genomes = 1
 
 
 #make arbitrary assignment so lapply doesn't print
@@ -53,4 +51,4 @@ if(blast.debug == T){
 
 })
 
-
+number.genomes = max(na.omit(unique(as.numeric(multi.str.split(config.variables, "_", 2)))))

@@ -56,10 +56,7 @@ calculate.primers = function(alignment.file, set.folder){
     #the base path for auto primer picker
     project.path = paste0('/home/ac14037/project.phd.main/rotation1scripts_v4/original.data/IWGSC/all.alignments.dialign/', set.folder)
 
-    #read the configuration file
-    # config.file = readLines(opt$alternate.config)
-    # config.variables = multi.str.split(config.file, "=", 1)
-
+    
     #parse number of genomes in configuration file
     number.genomes = 1        
     gene.name = strsplit(alignment.file, '/')[[1]]
@@ -279,7 +276,7 @@ calculate.primers = function(alignment.file, set.folder){
         mult.align.mat.end.base = max(grep("A|C|T|G", multiple.alignment1[main.sequence.row.number, ]))  
         g = c(mult.align.mat.start.base, mult.align.mat.end.base)
         names(g) = c("start.base", "end.base")
-    g
+        g
     }
 
     get.coordinates.after.removing.hyphens = function(mult.align1, sequence.row.number, homologous.snps1, start.base1, end.base1){

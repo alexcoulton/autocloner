@@ -9,8 +9,6 @@ end.buffer = opt$end.buffer
 #the base path for auto primer picker
 project.path = base_directory
 
-#read the configuration file
-config.file = readLines(opt$alternate.config)
 config.variables = multi.str.split(config.file, "=", 1)
 
 #parse number of genomes in configuration file
