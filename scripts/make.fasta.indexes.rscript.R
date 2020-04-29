@@ -1,4 +1,3 @@
-
 #BLAST PARSER FOR SCAFFOLDS
 suppressMessages(library(tibble))
 suppressMessages(library(dplyr))
@@ -45,4 +44,4 @@ make.indexes.for.genome = function(genome.number){
 	}
 }
 
-lapply(number.genomes, make.indexes.for.genome)
+lapply(1:number.genomes, make.indexes.for.genome)
