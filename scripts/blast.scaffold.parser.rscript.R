@@ -307,7 +307,7 @@ main.processing = function(){
         fasta.index1$offset = as.numeric(fasta.index1$offset)
 
         genome.assembly.subset.genomic.match <<- readDNAStringSet(fasta.index1[match(original.scaf.names[1], fasta.index1$desc), ])  
-        template_sequence_genomic = extract.sequence(genome.assembly.subset.genomic.match, blastdf1.parsed[1, ], 1, 1000, 1000)  
+        template_sequence_genomic = extract.sequence(genome.assembly.subset.genomic.match, blastdf1.parsed[1, ], 1, opt$start.buffer, opt$end.buffer)  
 
         opt$fasta.path <<- p("jobs/", gene.name, "/seq/extended/seqs/input_w_flanking.fa")
         query.fa.path = p("jobs/", gene.name, "/seq/extended/seqs/input_w_flanking.fa")

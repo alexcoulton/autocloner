@@ -109,12 +109,11 @@ if(number.genomes < 1) {
 			opt$cds.max.intron.size = 3500		
 			# opt$alternate.config = './configs/b.rapa.config.txt'	
 			opt$alternate.config = './config.txt'	
-			opt$wheat.genomes.to.include = 'IWGSC_PARAGON'
+			opt$wheat.genomes.to.include = 'IWGSC_PARAGON_CLAIRE_ROBIGUS'
 		}
 	} 
 	
-
-	config.file = rearrange.config(config.file, opt$wheat.genomes.to.include)
+	if(opt$alternate.config == './config.txt') config.file = rearrange.config(config.file, opt$wheat.genomes.to.include)
 
 	muscle.debug = F
 	blast.debug = F

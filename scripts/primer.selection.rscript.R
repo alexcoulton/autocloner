@@ -906,6 +906,17 @@ if(exists('ONLY.PRIMER.SELECTION')){
     
 }
 
+
+write.snp.info = function(snp.info1){    
+    if(!file.exists(p(project.path, "jobs/", gene.name, "/seq/extended/SNPs"))){
+        dir.create(p(project.path, "jobs/", gene.name, "/seq/extended/SNPs"))
+    }
+    all.snps1 = data.frame(which(snp.info1$homologous.snps == 1))
+    colnames(all.snps1) = "snps"
+    writeLines(as.character(all.snps1$snps), p(project.path, "jobs/", gene.name, "/seq/extended/SNPs/snps.txt"))
+    writeLines(as.character(snp.info1$main.start.end), p(project.path, "jobs/", gene.name, "/seq/extended/SNPs/start.end.pos.txt"))
+}
+
 if(exists('ONLY.SNP.SELECTION')){
   print('ONLY.SNP.SELECTION')
     if(!file.exists(p(project.path, "jobs/", gene.name, "/seq/extended/SNPs"))){
@@ -921,11 +932,19 @@ if(exists('ONLY.SNP.SELECTION')){
 if(!(exists('ONLY.PRIMER.SELECTION') | exists('ONLY.SNP.SELECTION'))) {
 print("RUNNING STAGE 3")
 if(full.gene.product == T){
+  if(!file.exists(p(project.path, "jobs/", gene.name, "/seq/extended/SNPs"))){
+      dir.create(p(project.path, "jobs/", gene.name, "/seq/extended/SNPs"))
+  }
   snp.information = generate_align_w_snps()
+  write.snp.info(snp.information)
   coords = snp.information[[1]]
   find.best.primers(mult.align1, template.row, coords[[1]], coords[[2]], coords[[3]], c(1, 100000), T, coords = snp.information$coords, homologous.snps = snp.information$homologous.snps)
 } else {  
+  if(!file.exists(p(project.path, "jobs/", gene.name, "/seq/extended/SNPs"))){
+      dir.create(p(project.path, "jobs/", gene.name, "/seq/extended/SNPs"))
+  }
   snp.information = generate_align_w_snps()
+  write.snp.info(snp.information)
   coords = snp.information[[1]]  
   find.best.primers(mult.align1, template.row, coords[[1]], coords[[2]], coords[[3]], c(min.product.size, max.product.size), F, coords = snp.information$coords, homologous.snps = snp.information$homologous.snps)  
 }
