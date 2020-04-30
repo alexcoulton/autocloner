@@ -753,10 +753,10 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
                 #add stop condition
                 if(maximum.snp.coord > max(coords$snp.coords)){
                   if(iteration == 1){
-                    write('No valid forward primer coordinates', p('jobs/', gene.name, '/error.txt'))
-                    stop('No valid forward primer coordinates')
+                    write('No valid forward primer coordinates', p('jobs/', gene.name, '/primers/error.txt'))
+                    return(as.numeric())                    
                   } else {
-                    return(NA)
+                    return(as.numeric())
                   }
                 } 
             }
@@ -775,10 +775,10 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
                 #add stop conditions                
                 if(product.size.range[2] > length(template.sequence)){                  
                   if(iteration == 1){
-                    write('No valid reverse primer coordinates', p('jobs/', gene.name, '/error.txt'))
-                    stop('No valid reverse primer coordinates')
+                    write('No valid reverse primer coordinates', p('jobs/', gene.name, '/primers/error.txt'))
+                    return(as.numeric())
                   } else {                    
-                    return(NA)
+                    return(as.numeric())
                   }
                 } 
             }
@@ -868,8 +868,8 @@ find.best.primers = function(multiple.alignment, template.sequence.row.number, s
         forward.all.pen = penalties1[[1]][, 1:4]
         reverse.all.pen = penalties1[[2]][, 1:4]
     }    
-    used.coords1 = generate.best.primer.set(forward.all.pen, reverse.all.pen)    
-    generate.best.primer.set(forward.all.pen, reverse.all.pen, used.coords1[[1]], used.coords1[[2]], 2)
+    used.coords1 = generate.best.primer.set(forward.all.pen, reverse.all.pen)   
+    if(length(used.coords1) > 0) generate.best.primer.set(forward.all.pen, reverse.all.pen, used.coords1[[1]], used.coords1[[2]], 2)
 
 
 

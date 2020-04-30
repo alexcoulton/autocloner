@@ -150,6 +150,8 @@ if(number.genomes < 1) {
 			remove.hyphens1 = readLines(p(job_directory, opt$sequence.name, "/seq/extended/alignments/all.align.rev.fa"))		
 			remove.hyphens1 = gsub("-", "", remove.hyphens1)
 			writeLines(remove.hyphens1, p(job_directory, opt$sequence.name, "/seq/extended/alignments/all.align.rev.nohyphen.fa"))
+			writeLines(remove.hyphens1, p(job_directory, opt$sequence.name, "/seq/extended/seqs/all.fa"))
+			writeLines("", p(job_directory, opt$sequence.name, "/seq/extended/seqs/all.anc"))
 			
 			if(opt$alignment.method == "muscle"){
 				pipeline.stages = c("perform.muscle.R", "rearrange.muscle.rscript.R", "trim.alignment.rscript.R", "primer.selection.rscript.R",
@@ -164,8 +166,11 @@ if(number.genomes < 1) {
 				print.pipeline.stage(i)
 				source(paste0("./scripts/", i))
 			}		
-
+    
+            print('DELETE ERROR')
 			rm.error.txt()
+            print('DELETING')
+            print(paste0('./jobs/', opt$sequence.name, '/primers/error.txt'))
 	}
 
 	run.full.pipeline = function(){

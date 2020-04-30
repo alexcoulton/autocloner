@@ -3,7 +3,7 @@ gene.name = opt$sequence.name
 project.path = base_directory
 
 #the base path for auto primer picker
-multiple.alignment.path = p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.fa")
+multiple.alignment.path = p(project.path, "jobs/", gene.name, "/seq/extended/alignments/all.align.rev.w.snps.fa")
 
 
 multi.align = readDNAStringSet(multiple.alignment.path)
