@@ -79,9 +79,9 @@ if(number.genomes < 1) {
 	if(exists("autocloner.debug")){
 		if(autocloner.debug == T){
 			opt = list()		
-			opt$fasta.path = "debug_seq.fa"
+			opt$fasta.path = "non_iwgsc_seq.fa"
 			# opt$sequence.name = "debug_seq"			
-			opt$sequence.name = "paragon.test"		
+			opt$sequence.name = "non_iwgsc_seq"		
 			opt$product.full.gene = F
 			opt$min.product.size = 400
 			opt$max.product.size = 2000
@@ -109,7 +109,8 @@ if(number.genomes < 1) {
 			opt$cds.max.intron.size = 3500		
 			# opt$alternate.config = './configs/b.rapa.config.txt'	
 			opt$alternate.config = './config.txt'	
-			opt$wheat.genomes.to.include = 'IWGSC_PARAGON_CLAIRE_ROBIGUS'
+			# opt$wheat.genomes.to.include = 'IWGSC_PARAGON_CLAIRE_ROBIGUS'
+            opt$wheat.genomes.to.include = 'IWGSC'
 		}
 	} 
 	
@@ -167,10 +168,7 @@ if(number.genomes < 1) {
 				source(paste0("./scripts/", i))
 			}		
     
-            print('DELETE ERROR')
 			rm.error.txt()
-            print('DELETING')
-            print(paste0('./jobs/', opt$sequence.name, '/primers/error.txt'))
 	}
 
 	run.full.pipeline = function(){
@@ -179,11 +177,11 @@ if(number.genomes < 1) {
 
 			if(opt$alignment.method == "muscle"){
 				pipeline.stages = c("make.fasta.indexes.rscript.R", "perform.blast.rscript.R", "blast.scaffold.parser.rscript.R",
-					"perform.muscle.R", "rearrange.muscle.rscript.R", "trim.alignment.rscript.R", "primer.selection.rscript.R",
+					"perform.muscle.R", "rearrange.muscle.rscript.R", "trim.alignment.rscript.R", "check.sequence.concordance.R", "primer.selection.rscript.R",
 					"primer.evaluation.rscript.R", "get.product.sequences.R")
 			} else {
 				pipeline.stages = c("make.fasta.indexes.rscript.R", "perform.blast.rscript.R", "blast.scaffold.parser.rscript.R",
-					"run.dialign.R", "primer.selection.rscript.R",
+					"run.dialign.R", "check.sequence.concordance.R", "primer.selection.rscript.R",
 					"primer.evaluation.rscript.R", "get.product.sequences.R")
 			}
 
@@ -241,10 +239,10 @@ if(number.genomes < 1) {
 
 			if(opt$alignment.method == "muscle"){
 				pipeline.stages = c("make.fasta.indexes.rscript.R", "perform.blast.rscript.R", "blast.scaffold.parser.rscript.R",
-			 		"perform.muscle.R", "rearrange.muscle.rscript.R", "trim.alignment.rscript.R")
+			 		"perform.muscle.R", "rearrange.muscle.rscript.R", "trim.alignment.rscript.R", "check.sequence.concordance.R")
 			} else {
 				pipeline.stages = c("make.fasta.indexes.rscript.R", "perform.blast.rscript.R", "blast.scaffold.parser.rscript.R",
-					"run.dialign.R")
+					"run.dialign.R", "check.sequence.concordance.R")
 			}
 
 			for(i in pipeline.stages){

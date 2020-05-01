@@ -668,7 +668,7 @@ calculate.primers = function(alignment.file, set.folder){
             #######################################
             
             write.csv(left.parsed3, paste0(set.folder, '/', gene.name, '/forward.all.pen.csv'), row.names = F)
-            write.csv(right.parsed3, paste0(set.folder, '/', gene.name, '/forward.all.pen.csv'), row.names = F)
+            write.csv(right.parsed3, paste0(set.folder, '/', gene.name, '/reverse.all.pen.csv'), row.names = F)
 
             return(list(left.parsed3, right.parsed3))
         }
@@ -768,10 +768,16 @@ calculate.primers = function(alignment.file, set.folder){
         
         best.primers.all = generate.best.primer.set(forward.all.pen, reverse.all.pen)
         if(length(best.primers.all) > 0){
-            align.w.primers = matrix(data = "-", nrow = (length(mult.align1) + (nrow(best.primers.all[[1]]) * 2)), ncol = length(mult.align1[[1]]))
+            
+            align.w.primers = matrix(data = "-", nrow = (length(mult.align1) + 1 + (nrow(best.primers.all[[1]]) * 2)), ncol = length(mult.align1[[1]]))
             align.w.primers[1:length(mult.align1), ] = as.matrix(mult.align1)
 
-            primer.index = length(mult.align1) + 1
+            snps.row = homologous.snps
+            snps.row[which(snps.row == 0)] = "-"
+            snps.row[which(snps.row == 1)] = "S"
+            align.w.primers[(length(mult.align1) + 1), ] = snps.row
+
+            primer.index = length(mult.align1) + 2
             primer.file1.multi.forward.pos.vector = as.numeric()
             primer.file1.multi.reverse.pos.vector = as.numeric()
             for(x in 1:nrow(best.primers.all[[1]])){
@@ -807,9 +813,9 @@ calculate.primers = function(alignment.file, set.folder){
                 primer.index = primer.index + 2
             }
 
-            align.row.names = c(names(mult.align1), interleave(paste0('forward_', best.primers.all[[1]]$MSA.pos), paste0('reverse_', best.primers.all[[2]]$MSA.pos)))
+            align.row.names = c(names(mult.align1), 'SNPs', interleave(paste0('forward_', best.primers.all[[1]]$MSA.pos), paste0('reverse_', best.primers.all[[2]]$MSA.pos)))
             align.w.primers2 = conv.matrix.dnastringset(align.w.primers, align.row.names)
-
+            
             writeXStringSet(align.w.primers2, paste0(set.folder, '/', gene.name, '/align.w.primers.fa'))
             write.csv(best.primers.all[[1]], paste0(set.folder, '/', gene.name, '/best.primers.forward.csv'), row.names = F)
             write.csv(best.primers.all[[2]], paste0(set.folder, '/', gene.name, '/best.primers.reverse.csv'), row.names = F)
