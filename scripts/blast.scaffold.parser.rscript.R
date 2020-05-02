@@ -306,8 +306,8 @@ main.processing = function(){
         
         fasta.index1$offset = as.numeric(fasta.index1$offset)
 
-		browser()
         genome.assembly.subset.genomic.match <<- readDNAStringSet(fasta.index1[match(original.scaf.names[1], multi.str.split(fasta.index1$desc, " ", 1)), ])  
+        names(genome.assembly.subset.genomic.match) = multi.str.split(names(genome.assembly.subset.genomic.match), " ", 1)
         template_sequence_genomic = extract.sequence(genome.assembly.subset.genomic.match, blastdf1.parsed[1, ], 1, opt$start.buffer, opt$end.buffer)  
 
         opt$fasta.path <<- p("jobs/", gene.name, "/seq/extended/seqs/input_w_flanking.fa")
@@ -343,8 +343,8 @@ main.processing = function(){
         #SEQUENCE EXTRACTION WITH FULL TEMPLATE (INCLUDING FLANKING REGIONS)
         blastdf1.parsed = parse.scaffold.blast(blastdf0, opt$cds.max.intron.size)  
         
-        genome.assembly.subset.genomic.match <<- readDNAStringSet(fasta.index1[match(unique(blastdf1.parsed[[1]]$scaffold), fasta.index1$desc), ])
-
+        genome.assembly.subset.genomic.match <<- readDNAStringSet(fasta.index1[match(unique(blastdf1.parsed[[1]]$scaffold), multi.str.split(fasta.index1$desc, " ", 1)), ])
+        names(genome.assembly.subset.genomic.match) = multi.str.split(names(genome.assembly.subset.genomic.match), " ", 1)
         sequences = DNAStringSet()  
         if(number.to.extract == 'all') number.to.extract = nrow(blastdf1.parsed[[1]])       
 
