@@ -1,6 +1,0 @@
-#configuration file detailing
-#paths to genome assembly files,
-#including .fa file, blastdb and name of genome
-GENOME_1_NAME=brassica.napus
-GENOME_1_FA_PATH=/home/ac14037/project.phd.main/genome_assemblies/polyploids/brassica.napus/Brassica_napus.AST_PRJEB5043_v1.dna.toplevel.fa
-GENOME_1_BLASTDB_PATH=/home/ac14037/project.phd.main/genome_assemblies/polyploids/brassica.napus/blastdb/brassica.napus
