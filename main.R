@@ -45,6 +45,47 @@ option_list = list(
 
 opt = parse_args(OptionParser(option_list = option_list))	
 
+
+		if(exists("autocloner.debug")){
+			if(autocloner.debug == T){
+				opt = list()		
+				#opt$fasta.path = "non_iwgsc_seq.fa"
+				opt$fasta.path = "debug_seq.fa"
+				# opt$sequence.name = "debug_seq"			
+				opt$sequence.name = "durum_debug"		
+				opt$product.full.gene = F
+				opt$min.product.size = 400
+				opt$max.product.size = 2000
+				opt$start.buffer = 2000
+				opt$end.buffer = 2000
+				
+				#ALL RUN MODES
+				opt$run.mode = "run.full.pipeline"
+				# opt$run.mode = "run.pipeline.own.alignment"
+				# opt$run.mode = "run.only.primer.selection"
+				# opt$run.mode = "run.only.msa"
+				# opt$run.mode = "run.only.snp.selection"
+				# opt$run.mode = "run.adv.primer.select.job"					
+
+				opt$own.alignment.path = "" # alignment path			
+				opt$perform.masking = F
+				opt$mask.bin.size = 10
+				opt$mask.threshold = 40
+				opt$allow.hyphens.in.mask = "F"
+				opt$number.homologues = 4			
+				opt$all.homologues = T
+				opt$allow.hyphens.for.snp.detection = T
+				opt$alignment.method = "dialign"
+				opt$mask.inter.hsp.distances = T
+				opt$cds.max.intron.size = 3500		
+				#opt$alternate.config = './configs/b.rapa.config.txt'	
+				opt$alternate.config = './configs/durum.svevo.config.txt'	
+				#opt$alternate.config = './config.txt'	
+				# opt$wheat.genomes.to.include = 'IWGSC_PARAGON_CLAIRE_ROBIGUS'
+				opt$wheat.genomes.to.include = 'IWGSC'
+			}
+		} 
+
 config.file = readLines(opt$alternate.config)
 
 rearrange.config = function(config.file, wheat.genomes.to.include){
@@ -75,45 +116,6 @@ if(number.genomes < 1) {
 } else {
 	
 	#### DEBUG OPTIONS ####
-
-	if(exists("autocloner.debug")){
-		if(autocloner.debug == T){
-			opt = list()		
-			opt$fasta.path = "non_iwgsc_seq.fa"
-			# opt$sequence.name = "debug_seq"			
-			opt$sequence.name = "non_iwgsc_seq"		
-			opt$product.full.gene = F
-			opt$min.product.size = 400
-			opt$max.product.size = 2000
-			opt$start.buffer = 2000
-			opt$end.buffer = 2000
-			
-			#ALL RUN MODES
-			opt$run.mode = "run.full.pipeline"
-			# opt$run.mode = "run.pipeline.own.alignment"
-			# opt$run.mode = "run.only.primer.selection"
-			# opt$run.mode = "run.only.msa"
-			# opt$run.mode = "run.only.snp.selection"
-			# opt$run.mode = "run.adv.primer.select.job"					
-
-			opt$own.alignment.path = "" # alignment path			
-			opt$perform.masking = F
-			opt$mask.bin.size = 10
-			opt$mask.threshold = 40
-			opt$allow.hyphens.in.mask = "F"
-			opt$number.homologues = 4			
-			opt$all.homologues = T
-			opt$allow.hyphens.for.snp.detection = T
-			opt$alignment.method = "dialign"
-			opt$mask.inter.hsp.distances = T
-			opt$cds.max.intron.size = 3500		
-			# opt$alternate.config = './configs/b.rapa.config.txt'	
-			opt$alternate.config = './config.txt'	
-			# opt$wheat.genomes.to.include = 'IWGSC_PARAGON_CLAIRE_ROBIGUS'
-            opt$wheat.genomes.to.include = 'IWGSC'
-		}
-	} 
-	
 	if(opt$alternate.config == './config.txt') config.file = rearrange.config(config.file, opt$wheat.genomes.to.include)
 
 	muscle.debug = F

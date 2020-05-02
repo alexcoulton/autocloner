@@ -2,11 +2,17 @@
 #paths to genome assembly files,
 #including .fa file, blastdb and name of genome
 GENOME_1_NAME=IWGSC
-GENOME_1_FA_PATH=/home/ac14037/project.phd.main/genome_assemblies/iwgsc/iwgsc.4b.rev.fa
-GENOME_1_BLASTDB_PATH=/home/ac14037/project.phd.main/bioinf/blast/probe.vs.genome.blast/blastdb/iwgsc.4b.rev.db
+GENOME_1_FA_PATH=/mnt/data/genome_assemblies/iwgsc/iwgsc.blast.db
+GENOME_1_BLASTDB_PATH=/mnt/data/genome_assemblies/iwgsc/iwgsc.blast.db
 GENOME_2_NAME=PARAGON
-GENOME_2_FA_PATH=/home/ac14037/project.phd.main/genome_assemblies/tgac/Triticum_aestivum_Paragon_EIv1.1.fa
-GENOME_2_BLASTDB_PATH=/home/ac14037/project.phd.main/bioinf/blast/genes.vs.paragon.genome/blastdb/earlham.paragon.db
+GENOME_2_FA_PATH=/mnt/data/genome_assemblies/tgac/Triticum_aestivum_Paragon_EIv1.1.fa
+GENOME_2_BLASTDB_PATH=/mnt/data/genome_assemblies/tgac/blastdb/paragon
 GENOME_3_NAME=CLAIRE
-GENOME_3_FA_PATH=/home/ac14037/project.phd.main/genome_assemblies/tgac/Triticum_aestivum_Claire_EIv1.1.fa
-GENOME_3_BLASTDB_PATH=/home/ac14037/project.phd.main/bioinf/blast/claire.genome/blastdb/claire
+GENOME_3_FA_PATH=/mnt/data/genome_assemblies/tgac/Triticum_aestivum_Claire_EIv1.1.fa
+GENOME_3_BLASTDB_PATH=/mnt/data/genome_assemblies/tgac/blastdb/claire
+GENOME_4_NAME=ROBIGUS
+GENOME_4_FA_PATH=/mnt/data/genome_assemblies/tgac/Triticum_aestivum_Robigus_EIv1.1.fa
+GENOME_4_BLASTDB_PATH=/mnt/data/genome_assemblies/tgac/blastdb/robigus
+GENOME_5_NAME=CADENZA
+GENOME_5_FA_PATH=/mnt/data/genome_assemblies/tgac/Triticum_aestivum_Cadenza_EIv1.1.fa
+GENOME_5_BLASTDB_PATH=/mnt/data/genome_assemblies/tgac/blastdb/cadenza
