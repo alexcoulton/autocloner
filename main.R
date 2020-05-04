@@ -25,8 +25,8 @@ option_list = list(
 		make_option(c("--product.full.gene", "-P"), action = "store_true", default = F),
 		make_option(c("--min.product.size", "-m"), type = "integer", default = 800),
 		make_option(c("--max.product.size", "-M"), type = "integer", default = 1000),
-		make_option(c("--start.buffer", "-s"), type = "integer", default = 2000),
-		make_option(c("--end.buffer", "-e"), type = "integer", default = 2000),
+		make_option(c("--start.buffer", "-s"), type = "integer", default = 1000),
+		make_option(c("--end.buffer", "-e"), type = "integer", default = 1000),
 		make_option(c("--own.alignment.path", "-a"), type = "character", default = ""),		
 		make_option(c("--run.mode", "-r"), type = "character", default = "run.full.pipeline"), # specify pipeline - "full", "own.align", "only.primer.selection", "only.msa"
 		make_option(c("--perform.masking"), action = "store_true", default = F), 
@@ -50,15 +50,16 @@ opt = parse_args(OptionParser(option_list = option_list))
 			if(autocloner.debug == T){
 				opt = list()		
 				#opt$fasta.path = "non_iwgsc_seq.fa"
-				opt$fasta.path = "testing/test_sequences/durum_test1.fa"
+				#opt$fasta.path = "testing/test_sequences/bnapustest.fa"
+				opt$fasta.path = "testing/test_sequences/debug_seq.fa"
 				#opt$fasta.path = "testing/test_sequences/b_rapa_test.fa"
 				# opt$sequence.name = "debug_seq"			
-				opt$sequence.name = "durum_test"		
+				opt$sequence.name = "bnapustest1"		
 				opt$product.full.gene = F
 				opt$min.product.size = 400
 				opt$max.product.size = 2000
-				opt$start.buffer = 2000
-				opt$end.buffer = 2000
+				opt$start.buffer = 1000
+				opt$end.buffer = 1000
 				
 				#ALL RUN MODES
 				opt$run.mode = "run.full.pipeline"
@@ -80,10 +81,51 @@ opt = parse_args(OptionParser(option_list = option_list))
 				opt$mask.inter.hsp.distances = T
 				opt$cds.max.intron.size = 3500		
 				#opt$alternate.config = './configs/b.rapa.config.txt'	
-				opt$alternate.config = './configs/durum.svevo.config.txt'	
+				#opt$alternate.config = './configs/durum.svevo.config.txt'	
+				opt$alternate.config = './configs/b.napus.config.txt'	
 				#opt$alternate.config = './config.txt'	
 				# opt$wheat.genomes.to.include = 'IWGSC_PARAGON_CLAIRE_ROBIGUS'
 				opt$wheat.genomes.to.include = 'IWGSC'
+				if(exists('wheat.debug')){
+					if(wheat.debug == T){
+						opt$fasta.path = "testing/test_sequences/debug_seq.fa"
+						opt$alternate.config = './config.txt'
+						opt$run.mode = 'run.full.pipeline'
+						opt$sequence.name = 'wheat_debug_test'
+					}
+				}
+				if(exists('brapa.debug')){
+					if(brapa.debug == T){
+						opt$fasta.path = "testing/test_sequences/b_rapa_test.fa"
+						opt$alternate.config = './configs/b.rapa.config.txt'
+						opt$run.mode = 'run.full.pipeline'
+						opt$sequence.name = 'brapadebugtest1'
+					}
+				}
+				if(exists('bnapus.debug')){
+					if(bnapus.debug == T){
+						opt$fasta.path = "testing/test_sequences/bnapustest.fa"
+						opt$alternate.config = './configs/b.napus.config.txt'
+						opt$run.mode = 'run.full.pipeline'
+						opt$sequence.name = 'bnapusdebug.txt'
+					}
+				}
+				if(exists('durum.debug')){
+					if(durum.debug == T){
+						opt$fasta.path = "testing/test_sequences/durum_test1.fa"
+						opt$alternate.config = './configs/durum.svevo.config.txt'
+						opt$run.mode = 'run.full.pipeline'
+						opt$sequence.name = 'durum_debug_test'
+					}
+				}
+				if(exists('rye.debug')){
+					if(rye.debug == T){
+						opt$fasta.path = "testing/test_sequences/rye_seq.fa"
+						opt$alternate.config = './configs/rye.config.txt'
+						opt$run.mode = 'run.full.pipeline'
+						opt$sequence.name = 'rye_test'
+					}
+				}
 			}
 		} 
 
