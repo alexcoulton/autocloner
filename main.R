@@ -50,9 +50,10 @@ opt = parse_args(OptionParser(option_list = option_list))
 			if(autocloner.debug == T){
 				opt = list()		
 				#opt$fasta.path = "non_iwgsc_seq.fa"
-				opt$fasta.path = "debug_seq.fa"
+				opt$fasta.path = "testing/test_sequences/durum_test1.fa"
+				#opt$fasta.path = "testing/test_sequences/b_rapa_test.fa"
 				# opt$sequence.name = "debug_seq"			
-				opt$sequence.name = "durum_debug"		
+				opt$sequence.name = "durum_test"		
 				opt$product.full.gene = F
 				opt$min.product.size = 400
 				opt$max.product.size = 2000
@@ -277,3 +278,6 @@ if(number.genomes < 1) {
 
 	}
 }
+
+
+
