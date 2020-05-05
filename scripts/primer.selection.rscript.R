@@ -265,7 +265,14 @@ get.coordinates.after.removing.hyphens = function(mult.align1, sequence.row.numb
   seq.mat$end.base = ""
   seq.mat$end.base[end.base1] = 1
 
-  seq.mat2 = seq.mat[-which(seq.mat[, 1] == "-"), ] #remove hyphens
+  hyphencoord1 = which(seq.mat[, 1] == "-")
+  if(length(hyphencoord1) > 0){
+  	seq.mat2 = seq.mat[-which(seq.mat[, 1] == "-"), ] #remove hyphens
+  } else {
+	seq.mat2 = seq.mat
+  }
+
+
   seq.mat2$new.coords = 1:nrow(seq.mat2)
   snp.coords.after.filter = which(seq.mat2$snps == 1) #these are the coordinates of the homologous snps in this particular sequence after removing hyphens 
   start.coord.after.filter = which(seq.mat2$start.base == 1) #coordinate of the start codon ATG after removing hyphens

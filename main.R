@@ -45,7 +45,6 @@ option_list = list(
 
 opt = parse_args(OptionParser(option_list = option_list))	
 
-
 		if(exists("autocloner.debug")){
 			if(autocloner.debug == T){
 				opt = list()		
@@ -96,10 +95,12 @@ opt = parse_args(OptionParser(option_list = option_list))
 				}
 				if(exists('brapa.debug')){
 					if(brapa.debug == T){
-						opt$fasta.path = "testing/test_sequences/b_rapa_test.fa"
+						opt$fasta.path = "testing/test_sequences/brapatest2.fa"
 						opt$alternate.config = './configs/b.rapa.config.txt'
 						opt$run.mode = 'run.full.pipeline'
-						opt$sequence.name = 'brapadebugtest1'
+						opt$sequence.name = 'brapadebugtest2'
+						opt$alignment.method = 'muscle'
+						opt$mask.inter.hsp.distances = F
 					}
 				}
 				if(exists('bnapus.debug')){
@@ -129,6 +130,9 @@ opt = parse_args(OptionParser(option_list = option_list))
 			}
 		} 
 
+
+
+print(opt)
 config.file = readLines(opt$alternate.config)
 
 rearrange.config = function(config.file, wheat.genomes.to.include){
