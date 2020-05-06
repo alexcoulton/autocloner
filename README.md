@@ -27,16 +27,16 @@ GENOME_3_BLASTDB_PATH=/path/to/blastdb
 
 ### Running AutoCloner
 
-To run AutoCloner, launch main.R with arguments -n for the job name and either -f for the path to the fasta sequence or -a for the path to the multiple sequence alignment if your wish to use your own alignment. AutoCloner returns two sets of primers covering the input sequence such that a redundant set is available in case one of the initial primers does not work.
+To run AutoCloner, launch autocloner.R with arguments -n for the job name and either -f for the path to the fasta sequence or -a for the path to the multiple sequence alignment if your wish to use your own alignment. AutoCloner returns two sets of primers covering the input sequence such that a redundant set is available in case one of the initial primers does not work.
 
 ```
-./main.R -n myjob1 -f ./myfastafile.fa
+./autocloner.R -n myjob1 -f ./myfastafile.fa
 ```
 
 Or
 
 ```
-./main.R -n myjob1 -a ./mymultiplesequencealignment.fa
+./autocloner.R -n myjob1 -a ./mymultiplesequencealignment.fa
 ```
 
 ### Arguments
