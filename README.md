@@ -4,7 +4,7 @@ Initial requirements
 
 AutoCloner requires muscle, BLAST, primer3, and R 3.5.1 to be installed on the system. In addition, it requires R packages optparse, Biostrings, tibble and dplyr.
 
-###Setting up the configuration file
+### Setting up the configuration file
 
 Before using AutoCloner, it is first necessary to setup the configuration file, config.txt. This tells AutoCloner where your genome assembly, in fasta format, and BLAST database for the same assembly are. The file contains three variables, GENOME_N_NAME, which details the name of the genome assembly, GENOME_N_FA_PATH, the path to the fasta file of the assembly and GENOME_N_BLASTDB_PATH, the path to the BLAST database of the genome.
 
@@ -25,7 +25,7 @@ GENOME_3_FA_PATH=/path/to/fasta_file
 GENOME_3_BLASTDB_PATH=/path/to/blastdb
 ```
 
-###Running AutoCloner
+### Running AutoCloner
 
 To run AutoCloner, launch main.R with arguments -n for the job name and either -f for the path to the fasta sequence or -a for the path to the multiple sequence alignment if your wish to use your own alignment. AutoCloner returns two sets of primers covering the input sequence such that a redundant set is available in case one of the initial primers does not work.
 
@@ -37,7 +37,7 @@ Or
 
 ./main.R -n myjob1 -a ./mymultiplesequencealignment.fa
 
-###Arguments
+### Arguments
 
 AutoCloner also has several other additional arguments:
 
@@ -48,7 +48,7 @@ End buffer (-e) – specifies the number of bases to include in the multiple seq
 Full gene product (-P) – Boolean flag. If present, only one set of primers will be returned whose product includes the entire input sequence.
 Only perform primer selection (-O) – Boolean flag. If present, AutoCloner will skip the initial stages of the pipeline and perform primer selection again for the specified job. This is useful if you wish to try out some different settings for an existing job, for example a different maximum product size. NB. If this flag is present, the -f and -a flags are not required.
 
-###Output
+### Output
 
 AutoCloner outputs several files into the jobs/yourjobname directory:
 
