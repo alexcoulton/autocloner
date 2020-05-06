@@ -1,7 +1,7 @@
 # AutoCloner
 ## Gene cloning in polyploids made easy
 
-###Initial requirements
+### Initial requirements
 
 AutoCloner requires muscle, BLAST, primer3, and R 3.5.1 to be installed on the system. In addition, it requires R packages optparse, Biostrings, tibble and dplyr.
 
@@ -43,12 +43,24 @@ Or
 
 AutoCloner also has several other additional arguments:
 
+```
 Minimum product size (-m) – specifies the minimum allowed product size for any of the primers in base pairs. Default value is 800.
+```
+```
 Maximum product size (-M) – specifies the maximum allowed product size for any of the primers in base pairs. Default value is 2000.
+```
+```
 Start buffer (-s) – specifies the number of bases to include in the multiple sequence alignment upstream of the sequence to be cloned.
+```
+```
 End buffer (-e) – specifies the number of bases to include in the multiple sequence alignment downstream of the sequence to be cloned.
+```
+```
 Full gene product (-P) – Boolean flag. If present, only one set of primers will be returned whose product includes the entire input sequence.
+```
+```
 Only perform primer selection (-O) – Boolean flag. If present, AutoCloner will skip the initial stages of the pipeline and perform primer selection again for the specified job. This is useful if you wish to try out some different settings for an existing job, for example a different maximum product size. NB. If this flag is present, the -f and -a flags are not required.
+```
 
 ### Output
 
