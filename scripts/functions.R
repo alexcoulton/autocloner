@@ -5,9 +5,6 @@
 
 #SETUP
 
-# setwd("C:/Users/ac14037/project.phd.main/")
-# setwd("~/project.phd.main/")
-
 #FUNCTIONS
 
 p = function(...){
